@@ -171,36 +171,35 @@ sub batch_scan {
 
     # Make local copy of model file to modify
     my $model_path_copy = SB_DATA_DIR . '/' . SB_PREFIX . $entry->{'model'};
-    open($copy_fh, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
-    print $copy_fh $script;
+    open($fh_copy, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
+    print $fh_copy $script;
 
     # Begin the BNGL runs
+    my $current_val = $entry->{'start_val'};
+
     for my $run_num (1..$entry->{'num_runs'})
     {
-print "RUNNING $run_num times\n";
-       my $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
-       my $srun= sprintf "%05d", $run_num;
-       if ($run_num > 1)
-       {
-         print $copy_fh "resetConcentrations();\n";
-       }
-#       my $x= $val;
-##      if ($log){ $x= exp($val);}
-#       printf $fh_copy "setParameter($var,$x);\n";
-#
-#       my $prefix = '';
-#       my $t_end = 500;       
-#       my $stead_state = 1;
-#       my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'}";
-#       if ($steady_state)
-#       {
-#         $opt .= ",steady_state=>1";
-#       }
-#       printf $fh_copy "simulate_ode({$opt});\n";
-#      $val+=$delta;
+      my $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
+#print "DELTA for $entry->{'param'}: $delta";
+      my $srun= sprintf "%05d", $run_num;
+      if ($run_num > 1)
+      {
+        print $fh_copy "resetConcentrations();\n";
+      }
+      printf $fh_copy "setParameter($entry->{'param'}, $current_val);\n";
+      my $prefix = '';
+      my $t_end = 500;       
+      my $stead_state = 1;
+      my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'}";
+      if ($steady_state)
+      {
+        $opt .= ",steady_state=>1";
+      }
+      printf $fh_copy "simulate_ode({$opt});\n";
+      $current_val += $delta;
     }
 
-    close $copy_fh or die "Couldn't save file '$model_path_copy'! $?";
+    close $fh_copy or die "Couldn't save file '$model_path_copy'! $?";
 
   }
 
