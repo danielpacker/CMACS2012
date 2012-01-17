@@ -92,6 +92,7 @@ created, as specified in your model file.
   target_column=2
 * Remove double quotes around 2nd arg for setConcenration()
 * Don't overwrite network?
+* Save equil run data in appropriate subdirs (currently hard coded to 'equil')
 
 === More documentation to follow... ===
 
