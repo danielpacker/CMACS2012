@@ -11,7 +11,8 @@ use File::Copy;
 use constant VALID_PARAMS     => qw/config_file/;
 use constant DEFAULT_NUM_RUNS => 100;
 use constant MODEL_DIR        => $ENV{'SB_MODEL_DIR'} || '.';
-use constant TEMP_DIR         => './sb_temp';
+use constant SB_DATA_DIR      => './sb_data';
+use constant SB_PREFIX        => 'SB_';
 
 sub new {
   my $class = shift;
@@ -156,10 +157,17 @@ sub batch_scan {
     }
     close $fh or die "Couldn't close file '$model_path'! $?";
 
-    if (! -e TEMP_DIR) # Create temp dir
+    if (! -e SB_DATA_DIR) # Create temp dir
     {
-      mkdir(TEMP_DIR) or die "Couldn't create temp dir '" . TEMP_DIR . " $?";
+      mkdir(SB_DATA_DIR) or die "Couldn't create temp dir '" . SB_DATA_DIR . " $?";
     }
+
+    my $model_path_copy = SB_DATA_DIR . '/' . SB_PREFIX . $entry->{'model'};
+    open($cfh, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
+
+    print $cfh $script;
+    close $cfh or die "Couldn't save file '$model_path_copy'! $?";
+
   }
 
 }
