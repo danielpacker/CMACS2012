@@ -15,6 +15,7 @@ use constant SB_DATA_DIR      => $ENV{'SB_DATA_DIR'} || './sb_data';
 use constant SB_PREFIX        => 'SB_';
 use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
 use constant SB_LOG_FILE      => 'scanbatch.log';
+use constant DEFAULT_DO_EQ    => 1;
 
 
 sub new {
@@ -224,14 +225,16 @@ sub batch_scan {
       }
 
       # BNGL code for equilibrium
-      my $eq_code = qq(
-      generate_network({overwrite => 1});
-      simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
-      saveConcentrations();
-      );
+      my $eq_code = qq(generate_network({overwrite => 1});
+simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
+saveConcentrations();
+);
+
+      my $do_eq = defined($self->{'model_settings'}->{$model}->{'do_eq'}) ? 
+        $self->{'model_settings'}->{$model}->{'do_eq'} : DEFAULT_DO_EQ;
 
       print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
-        if ($self->{'model_settings'}->{$model}->{'do_eq'});
+        if ($do_eq);
       print $fh_copy "\n# Added by BatchScan - Setting paramters for '$entry->{'param'}':\n";
 
       # Begin the BNGL runs
