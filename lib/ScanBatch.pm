@@ -235,7 +235,7 @@ sub batch_scan {
         {
           print $fh_copy "resetConcentrations();\n";
         }
-        print $fh_copy "setConcentration($entry->{'param'}, $current_val);\n";
+        print $fh_copy "setConcentration(\"$entry->{'param'}\", \"$current_val\");\n";
         my $prefix = $new_param_dir . '/' . $entry->{'param'};
         print "PREFIX: $prefix\n";
         my $t_end = 500;       
