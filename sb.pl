@@ -9,6 +9,8 @@ use ScanBatch;
 
 use constant CONF_FILE => (scalar(@ARGV)==0) ? 'scan.conf' : $ARGV[0];
 
-my $sb = ScanBatch->new('config_file' => CONF_FILE);
+my $sb = ScanBatch->new(
+  'config_file' => CONF_FILE,
+  );
 
 $sb->dump();

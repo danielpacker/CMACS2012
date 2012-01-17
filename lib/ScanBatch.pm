@@ -1,4 +1,8 @@
 #!/usr/bin/perl -w
+#
+# ScanBatch: Do batch simulations with BioNetGen for data collection
+# by Daniel Packer
+#
 
 package ScanBatch;
 
@@ -9,7 +13,7 @@ sub new {
   my %params = @_;
   my $self = {};
 
-  # copy valid paramters
+  # copy valid parameters
   for my $key (keys %params)
   {
     if (grep(VALID_PARAMS, $key))
@@ -41,9 +45,10 @@ sub read_conf {
 
   my @config_entries = ();
 
+  my $current_model = '';
+
   if (my $filename = $self->{'config_file'})
   {
-
     if (! -e $filename)
     {
       die "file '$filename' not found!";
@@ -59,10 +64,19 @@ sub read_conf {
         next if ($line =~ /^\s*#/); # skip comments
         #print "line: $line\n";
 
+        # get model file context
+        if ($line =~ /^\[([\w\.]*)\]/g)
+        {
+          $current_model = $1;
+          next; # nothing else to do
+        }
+
+        # Read the individual params on this line
         my ($param, $start_val, $end_val, $num_steps) =
           split(/\s*,\s*/, $line);
 
         my %config_entry = (
+          'model'     => $current_model,
           'param'     => $param,
           'start_val' => $start_val,
           'end_val'   => $end_val,
@@ -75,7 +89,7 @@ sub read_conf {
 
       close $fh or die "$!";
 
-      # save the config entries to object
+      # copy the config entries to object
       $self->{'config_entries'} = [@config_entries];
     }
   }
@@ -84,6 +98,8 @@ sub read_conf {
 sub dump {
 
   my $self = shift or die "Call via object!";
+
+  print "\n----------------------------------------------------------------------\n";
 
   # dump the config filename
   print "\nConfig file:\n" . $self->{'config_file'} . "\n";
@@ -95,6 +111,27 @@ sub dump {
     print join (", ", (map { $_ . ': ' . $entry->{$_} } (keys %$entry)));
     print "\n";
   }
+
+  print "\n----------------------------------------------------------------------\n";
+}
+
+
+####
+#
+# Take all of the config entries and do the appropriate scans!
+#  
+# For var1, create a TLD called var1/
+#   go into var1/
+#   we're going to generate BNGL commands 
+
+sub batch_scan {
+
+  my $self = shift or die "Call via object!";
+
+  my @config_entries = @{ $self->{'config_entries'} }; # get config entries
+
+  #for my $entry {
+
 }
 
 1;
