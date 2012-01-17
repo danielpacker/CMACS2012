@@ -7,7 +7,7 @@ use lib './lib';
 
 use ScanBatch;
 
-use constant CONF_FILE => (scalar(@ARGV)==0) ? 'scan.conf' : $ARGV[0];
+use constant CONF_FILE => (scalar(@ARGV)==0) ? 'sb.conf' : $ARGV[0];
 
 my $sb = ScanBatch->new(
   'config_file' => CONF_FILE,

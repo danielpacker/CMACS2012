@@ -231,7 +231,7 @@ sub batch_scan {
       );
 
       print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
-        if ($self->{'model_settings'}->{$model}->{'do_equilibriation'});
+        if ($self->{'model_settings'}->{$model}->{'do_eq'});
       print $fh_copy "\n# Added by BatchScan - Setting paramters for '$entry->{'param'}':\n";
 
       # Begin the BNGL runs

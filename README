@@ -7,6 +7,16 @@ set up a batch run.
 The program logic is in lib/ScanBatch.pm and the command line 
 program is sb.pl.
 
+=== INSTALLATION ===
+
+To install, download ScanBatch from github at:
+https://github.com/danielpacker/CMACS2012/
+
+You can do a git clone, or download the files directly.
+
+=== RUNNING ===
+
+
 More documentation to follow...
 
 Author: Daniel Packer <dp@danielpacker.org>
