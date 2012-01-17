@@ -1,8 +1,14 @@
-ScanBatch is a program for running large batches of simulations using BioNetGen (http://bionetgen.org). 
+ScanBatch is a program for running large batches of simulations using 
+BioNetGen (http://bionetgen.org). 
 
-It is loosely based (in particular, the method of generating modified BNGL files) on the scan_var.pl program that comes with BNG, but promises to be a great deal more helpful for automated data generation. It currently supports ranges of concentrations across arbitrary numbers of models, species, concentrations, and runs per concentration.
+It is loosely based (in particular, the method of generating modified BNGL 
+files) on the scan_var.pl program that comes with BNG, but promises to be 
+a great deal more helpful for automated data generation. It currently 
+supports ranges of concentrations across arbitrary numbers of models, 
+species, concentrations, and runs per concentration.
 
-See the example config file 'scan.conf' for an example of how to set up a batch run.
+See the example config file 'scan.conf' for an example of how to set up a 
+batch run.
 
 The program logic is in lib/ScanBatch.pm and the command line program is sb.pl.
 
@@ -17,9 +23,11 @@ You can do a git clone, or download the files directly.
 
 perl sb.pl [config-file-path]
 
-[config-file-path] is optional. By default sb.pl looks for a config file called sb.conf in your working directory.
+[config-file-path] is optional. By default sb.pl looks for a config file 
+called sb.conf in your working directory.
 
-There are several important environment variables you can set to change where files are sought or saved:
+There are several important environment variables you can set to change where 
+files are sought or saved:
 
 SB_MODEL_DIR='path-to-model-files'
 SB_DATA_DIR='path-to-where-data-is-saved' 
@@ -28,7 +36,8 @@ BNGPATH='path-to-bionetgen-dir'
 Here's an example of setting all of these and running sb.pl in one line:
 SB_MODEL_DIR='models' SB_DATA_DIR='/tmp/sb_data' BNGPATH='../rulebender/BioNetGen-2.1.7/' perl sb.pl
 
-This command uses /tmp for the data files, ./models for the model files, and the BNG that comes with my copy of rulebender.
+This command uses /tmp for the data files, ./models for the model files, and 
+the BNG that comes with my copy of rulebender.
 
 === CONFIG FILE ===
 
@@ -36,7 +45,8 @@ See sb.conf that comes with your installation for info.
 
 === DATA FILES ===
 
-ScanBatch saves files in the directory you specify via SB_DATA_DIR or in ./sb_data by default. The data is organized like this:
+ScanBatch saves files in the directory you specify via SB_DATA_DIR or 
+in ./sb_data by default. The data is organized like this:
 
 sb_data/
 	scanbatch.log
@@ -55,14 +65,18 @@ sb_data/
 	model_name2/
 	...
 
-There are as many models, species, concentrations, and runs as specified in the config file. The log file contains the output of BNG2.pl (bionetgen). [CONCENTRATION] refers to a directory with a numerical name.
+There are as many models, species, concentrations, and runs as specified 
+in the config file. The log file contains the output of BNG2.pl (bionetgen). 
+[CONCENTRATION] refers to a directory with a numerical name.
 
 A typical data file path might look like this:
 /tmp/sb_data/toy-jim/L(r)/3.33333333333333/00064.gdat
 
-This file is in a data directory of '/tmp/sb_data', for a model 'toy-jim.bngl', setting the concentration of species L(r) to 3.33333333333333 on the 64th run.
+This file is in a data directory of '/tmp/sb_data', for a model 'toy-jim.bngl', 
+setting the concentration of species L(r) to 3.33333333333333 on the 64th run.
 
-In addition to all of the gdat files (and cdat files), other files may be created, as specified in your model file.
+In addition to all of the gdat files (and cdat files), other files may be 
+created, as specified in your model file.
 
 === More documentation to follow... ===
 
