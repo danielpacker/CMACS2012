@@ -14,6 +14,7 @@ use constant MODEL_DIR        => $ENV{'SB_MODEL_DIR'} || '.';
 use constant SB_DATA_DIR      => './sb_data';
 use constant SB_PREFIX        => 'SB_';
 use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
+use constant SB_LOG_FILE      => 'scanbatch.log';
 
 # BNGL code for equilibrium
 use constant EQUIL_CODE       => qq(
@@ -117,6 +118,7 @@ sub read_conf {
   }
 }
 
+# Print the internal state of the object (data from config)
 sub dump {
 
   my $self = shift or die "Call via object!";
@@ -155,8 +157,13 @@ sub batch_scan {
 
   my %config_entries = %{ $self->{'config_entries'} }; # get config entries
 
-  # Work on one model at a time
+  # Create data dir
+  if (! -e SB_DATA_DIR)
+  {
+    mkdir(SB_DATA_DIR) or die "Couldn't create data dir'! $?";
+  }
 
+  # Work on one model at a time
   for my $model (keys %config_entries)
   {
     # Does the model exist?
@@ -164,6 +171,11 @@ sub batch_scan {
     my $model_path = MODEL_DIR . '/' . $model;
     print "MODEL PATH: $model_path\n";
     die "Model file '$model_path' not found!" unless (-e $model_path);
+
+    # Create a subdirectory for this model
+    my ($model_basename, $ext) = split('\.', $model);
+    my $new_model_dir = SB_DATA_DIR . '/' . $model_basename; 
+    mkdir($new_model_dir) or die "Couldn't mkdir '$new_model_dir'! $?";
 
     # Make a local copy of this config file & read the bngl script into memory
     open($fh, "<$model_path") or die "Couldn't open file '$model_path'! $?";
@@ -182,7 +194,7 @@ sub batch_scan {
     }
 
     # Make local copy of model file to modify
-    my $model_path_copy = SB_DATA_DIR . '/' . SB_PREFIX . $model;
+    my $model_path_copy = SB_DATA_DIR . '/' . $model_basename . '/' . SB_PREFIX . $model;
     open($fh_copy, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
     print $fh_copy $script;
 
@@ -216,7 +228,7 @@ sub batch_scan {
           print $fh_copy "resetConcentrations();\n";
         }
         print $fh_copy "setParameter($entry->{'param'}, $current_val);\n";
-        my $prefix = '';
+        my $prefix = $entry->{'param'};
         my $t_end = 500;       
         my $stead_state = 1;
         my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
@@ -230,6 +242,14 @@ sub batch_scan {
     } # done with entries for this model
 
     close $fh_copy or die "Couldn't save file '$model_path_copy'! $?";
+
+    # Run BioNetGen on file
+    print "Running BioNetGen on '$model_path_copy'\n";
+    my $exec = BNG_PATH . '/Perl2/BNG2.pl';
+    my $logfile = SB_DATA_DIR . '/' . SB_LOG_FILE;
+    #system("$exec $model_path_copy > $logfile");
+
+    # Move generated data files to appropriate directory
     
   } # done with this model, next model...
 }
