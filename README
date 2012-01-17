@@ -78,6 +78,21 @@ setting the concentration of species L(r) to 3.33333333333333 on the 64th run.
 In addition to all of the gdat files (and cdat files), other files may be 
 created, as specified in your model file.
 
+=== TODO ===
+
+* Allow config to specify if a given entry is for a paramters or a 
+  concentration corresponding to setParamter() or setConcentration()
+* Allow config to specify a range from start_val to end_val or
+  to specify a series (perhaps start_val can be a list?)
+* Add generation of time-series data by skimming the generated gdat
+  files for a given target (column) and threshhold value specified
+  in the model config. Perhaps:
+  [model.bngl]
+  threshhold=123
+  target_column=2
+* Remove double quotes around 2nd arg for setConcenration()
+* Don't overwrite network?
+
 === More documentation to follow... ===
 
 Author: Daniel Packer <dp@danielpacker.org>
