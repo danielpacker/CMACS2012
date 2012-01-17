@@ -8,6 +8,7 @@ package ScanBatch;
 
 use constant VALID_PARAMS => qw/config_file/;
 use constant DEFAULT_NUM_RUNS => 100;
+use constant MODEL_DIR => $ENV{'SB_MODEL_DIR'} || '.';
 
 sub new {
   my $class = shift;
@@ -63,15 +64,15 @@ sub read_conf {
         $line =~ s/\s*$//g; # remove trailing whitespace
         next if ($line =~ /^\s*$/); # skip blank lines
         next if ($line =~ /^\s*#/); # skip comments
-        #print "line: $line\n";
 
         # get model file context
-        if ($line =~ /^\[([\w\.]*)\]/g)
+        if ($line =~ /^\[([\w\.\-]*)\]/g)
         {
           $current_model = $1;
           next; # nothing else to do
         }
 
+        print "line: $line\n";
         # Read the individual params on this line
         my @fields = split(/\s*,\s*/, $line);
         my ($param, $start_val, $end_val, $num_steps) = @fields;
@@ -131,7 +132,21 @@ sub batch_scan {
 
   my @config_entries = @{ $self->{'config_entries'} }; # get config entries
 
-  #for my $entry {
+  # Pull out the entry to start scanning it
+  #my @entry_field_names = qw/model param start_val end_val num_steps num_runs/;
+  for my $entry (@config_entries)
+  {
+    die "No model defined" unless (exists $entry->{'model'});
+    my $model_path = MODEL_DIR . '/' . $entry->{'model'};
+    print "MODEL PATH: $model_path\n";
+
+    die "Model file '$model_path' not found!" unless (-e $model_path);
+    
+    #my %entry = map { $_ => $entry->{$_} } (keys %$entry);
+
+    # Validate that the model file exists
+
+  }
 
 }
 
