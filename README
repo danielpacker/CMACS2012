@@ -1,0 +1,12 @@
+ScanBatch is a program for running large batches of simulations
+using BioNetGen (http://bionetgen.org).
+
+See the example config file 'scan.conf' for an example of how to
+set up a batch run.
+
+The program logic is in lib/ScanBatch.pm and the command line 
+program is sb.pl.
+
+More documentation to follow...
+
+Author: Daniel Packer <dp@danielpacker.org>

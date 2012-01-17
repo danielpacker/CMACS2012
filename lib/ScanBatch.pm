@@ -6,9 +6,12 @@
 
 package ScanBatch;
 
-use constant VALID_PARAMS => qw/config_file/;
+use File::Copy;
+
+use constant VALID_PARAMS     => qw/config_file/;
 use constant DEFAULT_NUM_RUNS => 100;
-use constant MODEL_DIR => $ENV{'SB_MODEL_DIR'} || '.';
+use constant MODEL_DIR        => $ENV{'SB_MODEL_DIR'} || '.';
+use constant TEMP_DIR         => './sb_temp';
 
 sub new {
   my $class = shift;
@@ -136,16 +139,27 @@ sub batch_scan {
   #my @entry_field_names = qw/model param start_val end_val num_steps num_runs/;
   for my $entry (@config_entries)
   {
+    # Does the model exist?
     die "No model defined" unless (exists $entry->{'model'});
     my $model_path = MODEL_DIR . '/' . $entry->{'model'};
     print "MODEL PATH: $model_path\n";
-
     die "Model file '$model_path' not found!" unless (-e $model_path);
-    
-    #my %entry = map { $_ => $entry->{$_} } (keys %$entry);
 
-    # Validate that the model file exists
+    # Make a local copy of this config file & read the bngl script into memory
+    open($fh, "<$model_path") or die "Couldn't open file '$model_path'! $?";
+    my $script = "";
+    while(<$fh>)
+    {
+      $script.=$_;
+      # Skip actions
+      last if (/^\s*end\s*model\s*$/);
+    }
+    close $fh or die "Couldn't close file '$model_path'! $?";
 
+    if (! -e TEMP_DIR) # Create temp dir
+    {
+      mkdir(TEMP_DIR) or die "Couldn't create temp dir '" . TEMP_DIR . " $?";
+    }
   }
 
 }
