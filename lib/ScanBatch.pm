@@ -7,6 +7,7 @@
 package ScanBatch;
 
 use constant VALID_PARAMS => qw/config_file/;
+use constant DEFAULT_NUM_RUNS => 100;
 
 sub new {
   my $class = shift;
@@ -72,15 +73,17 @@ sub read_conf {
         }
 
         # Read the individual params on this line
-        my ($param, $start_val, $end_val, $num_steps) =
-          split(/\s*,\s*/, $line);
+        my @fields = split(/\s*,\s*/, $line);
+        my ($param, $start_val, $end_val, $num_steps) = @fields;
+        my $num_runs = (scalar(@fields) == 5) ? pop (@fields) : DEFAULT_NUM_RUNS;
 
         my %config_entry = (
           'model'     => $current_model,
           'param'     => $param,
           'start_val' => $start_val,
           'end_val'   => $end_val,
-          'num_steps' => $num_steps
+          'num_steps' => $num_steps,
+          'num_runs'  => $num_runs
           );
 
         push @config_entries, \%config_entry;
