@@ -97,6 +97,9 @@ created, as specified in your model file.
 * Remove any simulate/set commands at end of original model (make optional) like:
   [model.bngl]
   remove_commands=1
+* Add module for generation of R histograms from time series data in data files
+  - See above about time-series data
+
 
 === More documentation to follow... ===
 
