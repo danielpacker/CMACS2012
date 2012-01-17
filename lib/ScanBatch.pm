@@ -13,6 +13,7 @@ use constant DEFAULT_NUM_RUNS => 100;
 use constant MODEL_DIR        => $ENV{'SB_MODEL_DIR'} || '.';
 use constant SB_DATA_DIR      => './sb_data';
 use constant SB_PREFIX        => 'SB_';
+use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
 
 sub new {
   my $class = shift;
@@ -49,7 +50,7 @@ sub read_conf {
 
   my $self = shift or die "Call via object!";
 
-  my @config_entries = ();
+  my %config_entries = ();
 
   my $current_model = '';
 
@@ -91,14 +92,19 @@ sub read_conf {
           'num_runs'  => $num_runs
           );
 
-        push @config_entries, \%config_entry;
+        # Organize entries by model name
+        if (! exists($config_entries{$config_entry{'model'}}) )
+        {
+          $config_entries{$config_entry{'model'}} = [];
+        }
+        push @{ $config_entries{$config_entry{'model'}} }, \%config_entry;
         #print "[$param] [$start_val] [$end_val] [$num_steps]\n";
       }      
 
       close $fh or die "Error: $?";
 
       # copy the config entries to object
-      $self->{'config_entries'} = [@config_entries];
+      $self->{'config_entries'} = {%config_entries};
     }
   }
 }
@@ -110,14 +116,19 @@ sub dump {
   print "\n----------------------------------------------------------------------\n";
 
   # dump the config filename
-  print "\nConfig file:\n" . $self->{'config_file'} . "\n";
+  print "\nConfig file: " . $self->{'config_file'} . "\n";
 
   # dump the config entries
-  print "\nConfig entries:\n";
-  for my $entry (@{ $self->{'config_entries'} })
+  print "\n=== Config entries ===\n";
+  for my $model (keys %{ $self->{'config_entries'} })
   {
-    print join (", ", (map { $_ . ': ' . $entry->{$_} } (keys %$entry)));
-    print "\n";
+    print "Model '$model':\n";
+    my @entries = @{ $self->{'config_entries'}->{$model} };
+    for my $entry (@entries)
+    {
+      print join (", ", (map { $_ . ': ' . $entry->{$_} } (keys %$entry)));
+      print "\n";
+    }
   }
 
   print "\n----------------------------------------------------------------------\n";
