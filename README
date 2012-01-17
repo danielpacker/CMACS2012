@@ -94,6 +94,9 @@ created, as specified in your model file.
 * Don't overwrite network?
 * Save equil run data in appropriate subdirs (currently hard coded to 'equil')
 * Save data files in a timestamped directory so we can avoid overwriting old data
+* Remove any simulate/set commands at end of original model (make optional) like:
+  [model.bngl]
+  remove_commands=1
 
 === More documentation to follow... ===
 
