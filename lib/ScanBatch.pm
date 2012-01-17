@@ -282,9 +282,9 @@ sub batch_scan {
     my $logfile = SB_DATA_DIR . '/' . SB_LOG_FILE;
     system("$exec $model_path_copy > $logfile");
 
-    # Move generated data files to appropriate directory
-    
   } # done with this model, next model...
+  
+  print "\nScanBatch is DONE!\n";
 }
 
 1;
