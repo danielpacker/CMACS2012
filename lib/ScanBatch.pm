@@ -151,7 +151,7 @@ sub batch_scan {
     my $script = "";
     while(<$fh>)
     {
-      $script.=$_;
+      $script .= $_;
       # Skip actions
       last if (/^\s*end\s*model\s*$/);
     }
@@ -162,10 +162,37 @@ sub batch_scan {
       mkdir(SB_DATA_DIR) or die "Couldn't create temp dir '" . SB_DATA_DIR . " $?";
     }
 
+    # Make sure all numeric fields are defined for this entry
+    for my $field (qw/start_val end_val num_steps num_runs/)
+    {
+      die "field $field not defined" unless defined($entry->{$field});
+      die "field $field not numeric" unless ($entry->{$field} =~ /^\d+$/);
+    }
+
+    # Make local copy of model file to modify
     my $model_path_copy = SB_DATA_DIR . '/' . SB_PREFIX . $entry->{'model'};
     open($cfh, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
-
     print $cfh $script;
+
+    for my $run_num (1..$num_runs)
+    {
+       my $delta = ($end_val - $start_val) / ($num_steps - 1);
+       my $srun= sprintf "%05d", $run;
+#      if ($run_num>1){
+#        print BNGL "resetConcentrations()\n";
+#      }
+#      my $x= $val;
+#      if ($log){ $x= exp($val);}
+#      printf BNGL "setParameter($var,$x);\n";
+#
+#      my $opt= "prefix=>\"$prefix\",suffix=>\"$srun_num\",t_end=>$t_end,n_steps=>$n_steps";
+#      if ($steady_state){
+#        $opt.=",steady_state=>1";
+#      }
+#      printf BNGL "simulate_ode({$opt});\n";
+#      $val+=$delta;
+    }
+
     close $cfh or die "Couldn't save file '$model_path_copy'! $?";
 
   }
