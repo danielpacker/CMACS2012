@@ -7,7 +7,7 @@ a great deal more helpful for automated data generation. It currently
 supports ranges of concentrations across arbitrary numbers of models, 
 species, concentrations, and runs per concentration.
 
-See the example config file 'scan.conf' for an example of how to set up a 
+See the example config file 'sb.conf' for an example of how to set up a 
 batch run.
 
 The program logic is in lib/ScanBatch.pm and the command line program is sb.pl.
