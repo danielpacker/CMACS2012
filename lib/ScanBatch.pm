@@ -15,6 +15,14 @@ use constant SB_DATA_DIR      => './sb_data';
 use constant SB_PREFIX        => 'SB_';
 use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
 
+# BNGL code for equilibrium
+use constant EQUIL_CODE       => qq(
+generate_network({overwrite => 1});
+simulate_ode({suffix=>"equil",t_end=>100,n_steps=>100,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>1});
+saveConcentrations();
+);
+
+
 sub new {
   my $class = shift;
   my %params = @_;
@@ -193,12 +201,7 @@ sub batch_scan {
         die "field $field not numeric" unless ($entry->{$field} =~ /^\d+$/);
       }
 
-      print $fh_copy qq(\n# Added by BatchScan - Equilibriation:
-generate_network({overwrite => 1});
-simulate_ode({suffix=>"equil",t_end=>100,n_steps=>100,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>1});
-saveConcentrations();
-);
-
+      print $fh_copy "\n# Added by BatchScan - Equilibriation:" . EQUIL_CODE;
       print $fh_copy "\n# Added by BatchScan - Setting paramters for '$entry->{'param'}':\n";
 
       # Begin the BNGL runs
