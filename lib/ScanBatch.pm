@@ -11,7 +11,7 @@ use File::Copy;
 use constant VALID_PARAMS     => qw/config_file/;
 use constant DEFAULT_NUM_RUNS => 100;
 use constant MODEL_DIR        => $ENV{'SB_MODEL_DIR'} || '.';
-use constant SB_DATA_DIR      => './sb_data';
+use constant SB_DATA_DIR      => $ENV{'SB_DATA_DIR'} || './sb_data';
 use constant SB_PREFIX        => 'SB_';
 use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
 use constant SB_LOG_FILE      => 'scanbatch.log';
@@ -89,9 +89,10 @@ sub read_conf {
 
         #print "line: $line\n";
         # Read the individual params on this line
-        my @fields = split(/\s*,\s*/, $line);
-        my ($param, $start_val, $end_val, $num_steps) = @fields;
-        my $num_runs = (scalar(@fields) == 5) ? pop (@fields) : DEFAULT_NUM_RUNS;
+        my ($param, $fields) = split(/\:\s*/, $line);
+        my @fields = split(/\s*,\s*/, $fields);
+        my ($start_val, $end_val, $num_steps) = @fields;
+        my $num_runs = (scalar(@fields) == 4) ? pop (@fields) : DEFAULT_NUM_RUNS;
 
         my %config_entry = (
           'model'     => $current_model,
@@ -237,7 +238,7 @@ sub batch_scan {
         }
         print $fh_copy "setConcentration(\"$entry->{'param'}\", \"$current_val\");\n";
         my $prefix = $new_param_dir . '/' . $entry->{'param'};
-        print "PREFIX: $prefix\n";
+        #print "PREFIX: $prefix\n";
         my $t_end = 500;       
         my $stead_state = 1;
         my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
