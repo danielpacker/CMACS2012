@@ -1,11 +1,10 @@
-ScanBatch is a program for running large batches of simulations
-using BioNetGen (http://bionetgen.org).
+ScanBatch is a program for running large batches of simulations using BioNetGen (http://bionetgen.org). 
 
-See the example config file 'scan.conf' for an example of how to
-set up a batch run.
+It is loosely based (in particular, the method of generating modified BNGL files) on the scan_var.pl program that comes with BNG, but promises to be a great deal more helpful for automated data generation. It currently supports ranges of concentrations across arbitrary numbers of models, species, concentrations, and runs per concentration.
 
-The program logic is in lib/ScanBatch.pm and the command line 
-program is sb.pl.
+See the example config file 'scan.conf' for an example of how to set up a batch run.
+
+The program logic is in lib/ScanBatch.pm and the command line program is sb.pl.
 
 === INSTALLATION ===
 
