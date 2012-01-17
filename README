@@ -16,7 +16,45 @@ You can do a git clone, or download the files directly.
 
 === RUNNING ===
 
+perl sb.pl [config-file-path]
 
-More documentation to follow...
+[config-file-path] is optional. By default sb.pl looks for a config file called sb.conf in your working directory.
+
+There are several important environment variables you can set to change where files are sought or saved:
+
+SB_MODEL_DIR='path-to-model-files'
+SB_DATA_DIR='path-to-where-data-is-saved' 
+BNGPATH='path-to-bionetgen-dir'
+
+Here's an example of setting all of these and running sb.pl in one line:
+SB_MODEL_DIR='models' SB_DATA_DIR='/tmp/sb_data' BNGPATH='../rulebender/BioNetGen-2.1.7/' perl sb.pl
+
+This command uses /tmp for the data files, ./models for the model files, and the BNG that comes with my copy of rulebender.
+
+=== CONFIG FILE ===
+
+See sb.conf that comes with your installation for info.
+
+=== DATA FILES ===
+
+ScanBatch saves files in the directory you specify via SB_DATA_DIR or in ./sb_data by default. The data is organized like this:
+
+sb_data/
+	scanbatch.log
+	model_name/
+		species_name1/
+			species_name_0001.gdat
+			species_name_0002.gdat
+			...
+		species_name2/
+			species_name_2_0001.gdat
+			species_name_2_0002.gdat
+			...
+
+The log file contains the output of BNG2.pl (bionetgen).
+
+In addition to all of the gdat files (and cdat files), other files may be created, as specified in your model file.
+
+=== More documentation to follow... ===
 
 Author: Daniel Packer <dp@danielpacker.org>
