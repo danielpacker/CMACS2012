@@ -85,7 +85,7 @@ sub read_conf {
         if (grep(/\w+\=\w+/, $line))
         {
           my ($key, $val) = split('\s*=\s*', $line);
-          $self->{'model_settings'}->{$key} = $val;
+          $self->{'model_settings'}->{$current_model}->{$key} = $val;
           next;
         }
 
@@ -173,7 +173,7 @@ sub batch_scan {
     # Does the model exist?
     die "No model defined" unless (exists $config_entries{$model});
     my $model_path = MODEL_DIR . '/' . $model;
-    print "MODEL PATH: $model_path\n";
+    #print "MODEL PATH: $model_path\n";
     die "Model file '$model_path' not found!" unless (-e $model_path);
 
     # Create a subdirectory for this model
@@ -280,7 +280,7 @@ saveConcentrations();
     close $fh_copy or die "Couldn't save file '$model_path_copy'! $?";
 
     # Run BioNetGen on file
-    print "Running BioNetGen on '$model_path_copy'\n";
+    print "\nRunning BioNetGen on '$model_path_copy'\n";
     my $exec = BNG_PATH . '/Perl2/BNG2.pl';
     my $logfile = SB_DATA_DIR . '/' . SB_LOG_FILE;
     system("$exec $model_path_copy > $logfile");
