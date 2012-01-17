@@ -171,29 +171,36 @@ sub batch_scan {
 
     # Make local copy of model file to modify
     my $model_path_copy = SB_DATA_DIR . '/' . SB_PREFIX . $entry->{'model'};
-    open($cfh, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
-    print $cfh $script;
+    open($copy_fh, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
+    print $copy_fh $script;
 
-    for my $run_num (1..$num_runs)
+    # Begin the BNGL runs
+    for my $run_num (1..$entry->{'num_runs'})
     {
-       my $delta = ($end_val - $start_val) / ($num_steps - 1);
-       my $srun= sprintf "%05d", $run;
-#      if ($run_num>1){
-#        print BNGL "resetConcentrations()\n";
-#      }
-#      my $x= $val;
-#      if ($log){ $x= exp($val);}
-#      printf BNGL "setParameter($var,$x);\n";
+print "RUNNING $run_num times\n";
+       my $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
+       my $srun= sprintf "%05d", $run_num;
+       if ($run_num > 1)
+       {
+         print $copy_fh "resetConcentrations();\n";
+       }
+#       my $x= $val;
+##      if ($log){ $x= exp($val);}
+#       printf $fh_copy "setParameter($var,$x);\n";
 #
-#      my $opt= "prefix=>\"$prefix\",suffix=>\"$srun_num\",t_end=>$t_end,n_steps=>$n_steps";
-#      if ($steady_state){
-#        $opt.=",steady_state=>1";
-#      }
-#      printf BNGL "simulate_ode({$opt});\n";
+#       my $prefix = '';
+#       my $t_end = 500;       
+#       my $stead_state = 1;
+#       my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'}";
+#       if ($steady_state)
+#       {
+#         $opt .= ",steady_state=>1";
+#       }
+#       printf $fh_copy "simulate_ode({$opt});\n";
 #      $val+=$delta;
     }
 
-    close $cfh or die "Couldn't save file '$model_path_copy'! $?";
+    close $copy_fh or die "Couldn't save file '$model_path_copy'! $?";
 
   }
 
