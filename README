@@ -90,7 +90,7 @@ created, as specified in your model file.
   [model.bngl]
   threshhold=123
   target_column=2
-* Remove double quotes around 2nd arg for setConcenration()
+* Remove double quotes around 2nd arg for setConcenration() - prob not necessary.
 * Don't overwrite network?
 * Save equil run data in appropriate subdirs (currently hard coded to 'equil')
 * Save data files in a timestamped directory so we can avoid overwriting old data
