@@ -93,6 +93,7 @@ created, as specified in your model file.
 * Remove double quotes around 2nd arg for setConcenration()
 * Don't overwrite network?
 * Save equil run data in appropriate subdirs (currently hard coded to 'equil')
+* Save data files in a timestamped directory so we can avoid overwriting old data
 
 === More documentation to follow... ===
 
