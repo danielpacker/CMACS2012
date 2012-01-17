@@ -1,0 +1,230 @@
+# Model derived from:
+#   Jill C Sible and John J Tyson (2007) "Mathematical modeling as a tool for investigating
+#    cell cycle control networks." Methods 41(2).
+# Parameter values obtained from:
+#   Gabor Marlovits, Christopher J Tyson, Bela Novak, John J Tyson (1998) "Modeling M-phase
+#   control in Xenopus oocyte extracts: the surveillance mechanism for unreplicated DNA" 
+#   Biophysical Chemistry 72, 169-184.
+begin parameters
+
+    # Reaction rate can be described in terms of "unit concentration per unit time"
+    # or "reaction firings per unit time". While "unit concentration per unit time" is more
+    # common, the alternative is required for exact stochastic simulations, such Gillespie's SSA.
+    # Fortunately, "reaction firings per unit time" also works with ODE simulations.
+    # The only difference is that the output trajectories will have units of particles
+    # rather than concentration. To view the results in terms of concentration,
+    # divide the number of particles by Avogadro's Number (NA) and the simulation volume (V).
+    #
+    # Rate constants reported in the literature are usually compatible with reaction
+    # rate as "unit concentration per unit time". These constants must be converted
+    # before we can perform an exact stochastic simulation.
+    #
+    # If reaction rate is given as "unit concentration per unit time",
+    # then rate constants such have these units:  
+    #     constant reaction, k0:  conc/time
+    #     unimolecular elementary, k1:  /time
+    #     bimolecular elementary, k2:  /conc/time
+    #     Michaelis-Mentin (explicit enzyme) kcat, Km:  /time, conc
+    #     Michaelis-Mentin (implicit enzyme) Vmax, Km:  conc/time, conc
+    #     
+    # If reaction rate is given as "reaction firings per unit time"
+    # then rate constants such have these units:
+    #     constant reaction, k0':  /time
+    #     unimolecular elementary, k1':  /time
+    #     bimolecular elementary, k2':  /time
+    #     Michaelis-Mentin (explicit enzyme) kcat', Km':  /time, unitless
+    #     Michaelis-Mentin (implicit enzyme) Vmax', Km':  /time, unitless
+    #
+    # We can convert between the two types of rate constants as follows:
+    #    
+    #    k0' = k0*NA*V
+    #    k1' = k1
+    #    k2' = k2/NA/V
+    #    kcat' = kcat
+    #    Vmax' = Vmax*NA*V
+    #    Km'   = Km*NA*V
+    #
+    # where NA is Avogadro's Number and V is the simulated volume.
+    #
+    # CAUTION: Rate constants may be reported in the literature in a variety of 
+    #  ways. Be sure that the converted rate constants have the correct units.
+    #  Remember to include references and units in the model.
+    #
+    # Michaelis-Menten kinetics can be written in BNGL in a two ways:
+    #  1) explicit enzyme:  S + E -> P + E  Sat(kcat,Km)
+    #  2) implicit enzume:  S     -> P      Sat(Vmax,Km)
+    #
+    # While the first method is recommended for clarity, the second method is useful if:
+    #  a) the enzyme is unknown
+    #  b) the enzyme concentration is large and constant, and the user intends to run
+    #     network-free simulations with NFsim.
+    #
+    # Newer distributions of BioNetGen provide another way to write Michaelis-Menten kinetics
+    # or other more general kinetic laws: "global functions". Global function describe the rate law
+    # as a function of observable quantities. It's important to keep in mind that Global Functions
+    # describe the microscopic, or "per reactants", rate. The total reaction rate is
+    # calculated by multiplying the microscopic rate by the product of reactant concentrations
+    # (or particles). Using global functions we can write a Michaelis-Menten ratelaw as:
+    #
+    #  1) explicit enzyme:  S + E -> P + E  kcat/(Km + Stot)
+    #  2) implicit enzyme:  S     -> P      Vmax/(Km + Stot)
+    #
+    # where "Stot" is an observable that counts substrate molecules. Observe that Stot and Etot do
+    # not appear in the numerator! The function describes the microscopic rate. BioNetGen will
+    # calculate the total rate by multiplying the microscopic rate by the number of reactant
+    # sets. Therefore, the total rate will be the usual M-M expression: kcat*Etot*Stot/(Km + Stot)
+
+    NA    6.02214129e23    # Avogadro's number, per mole
+    V     1e-12            # simulation volume, liters
+
+    # Initial Totals and Species Counts, no units (units before conversion are M)
+    #   multiply molar concentration by NA*V to obtain species counts
+    tot_Cdk1     100e-9*NA*V   
+    tot_Cdc25      1e-9*NA*V
+    tot_Wee1       1e-9*NA*V
+    tot_IE         1e-9*NA*V
+    tot_APC        1e-9*NA*V
+    # NOTE: we're not defining "tot_PPase" since the Marlovits parameter set does not define PPase
+    # (i.e. the concentration of PPase is built-in to the Michaelis rate constant).
+    init_Cyclin    0e-9*NA*V
+    init_MPF       0e-9*NA*V
+    init_preMPF    0e-9*NA*V
+    init_Cdc25p    0e-9*NA*V
+    init_Wee1p     0e-9*NA*V
+    init_IEp       1e-9*NA*V
+    init_APCact    1e-9*NA*V
+
+    # elementary, unimolecular; units /min (units before conversion are M/min)
+    k1       1.0e-9*NA*V         # cyclin synthesis
+    # elementary, bimolecular; units /min (units before conversion are /min/M)
+    k3      0.005e9/NA/V         # Cyclin-Cdk1 binding
+
+    # elementary, bimolecular; units /min
+    # NOTE: Marlovits et al. provide these parameters in terms of V*[Etot], which
+    # has units of /min, while V has units of /M/min.
+    V2_1      0.005/tot_APC      # Cyclin degradation by inactive APC
+    V2_2       0.25/tot_APC      # Cyclin degradation by active APC
+    V25_1     0.017/tot_Cdc25    # preMPF dephosphorylation by Cdc25
+    V25_2      0.17/tot_Cdc25    # preMPF dephosphorylation by Cdc25-P
+    Vwee_1     0.01/tot_Wee1     # MPF phosphorylation by Wee1-P
+    Vwee_2      1.0/tot_Wee1     # MPF phosphorylation by Wee1
+
+    # Michaelis-Menten kcat, units /min 
+    # NOTE: Marlovits et al. provide these parameters in terms of kcat/[Stot], which
+    # has units of /M/min, while kcat has units of /min.
+    ka  0.02e9*tot_Cdc25/NA/V    # Cdc25 phosphorylation by MPF ("k25", Marlovits 1998)
+    kc  0.13e9*tot_APC/NA/V      # APC activation by IE-P ("kap", Marlovits 1998)
+    ke  0.02e9*tot_Wee1/NA/V     # Wee1 phosphorylation by MPF ("kw", Marlovits 1998)
+    kg  0.02e9*tot_IE/NA/V       # IE phosphorylation by MPF ("kie", Marlovits 1998)
+
+    # Michaelis-Menten Vmax, units /min 
+    # NOTE: Marlovits et al. provide these parameters in terms of Vmax/[Stot], which
+    # has units of /min, while Vmax has units of /M/min.
+    kb     0.1*tot_Cdc25    # Cdc25 dephosphorylation ("k25r", Marlovits 1998)
+    kd    0.13*tot_APC      # APC deactivation ("kapr", Marlovits 1998)
+    kf     0.1*tot_Wee1     # Wee1 dephosphorylation ("kwr", Marlovits 1998)
+    kh    0.15*tot_IE       # IE dephosphrylation ("kier", Marlovits 1998)
+
+    # Michaelis constants, unitless (units before conversion are none)
+    # NOTE: Marlovits et al. provide these parameters in terms of Km/[Stot], which
+    # is unitless, while Km has units of M.
+    Ka     0.1*tot_Cdc25
+    Kb     1.0*tot_Cdc25
+    Kc    0.01*tot_APC
+    Kd     1.0*tot_APC
+    Ke     0.1*tot_Wee1
+    Kf     1.0*tot_Wee1
+    Kg    0.01*tot_IE
+    Kh    0.01*tot_IE
+end parameters
+
+begin molecule types
+    I()                         # a source for synthesized molecules
+    Cyclin(cdk1)                # Cyclin molecule with Cdk1 binding site
+    Cdk1(cyclin,y~0~P,t~0~P)    # aka "Cdc2", has Cyclin binding site and 2 phosphorylation sites
+    Wee1(c~0~P)                 # Wee1 with phosphorylation site
+    Cdc25(c~0~P)                # Cdc25 with phosphorylation site
+    IE(c~0~P)                   # aka "intermediate enzyme" with phosphorylation site
+    APC(c~0~Act)                # aka "UbE", has activation site
+end molecule types
+
+begin seed species
+    I()                                    1
+    Cyclin(cdk1)                           init_Cyclin
+    Cdk1(cyclin,y~0,t~0)                   (tot_Cdk1 - init_preMPF - init_MPF)
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~P,t~P)  init_preMPF
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P)  init_MPF
+    Cdc25(c~0)                             (tot_Cdc25 - init_Cdc25p)
+    Cdc25(c~P)                             init_Cdc25p    
+    Wee1(c~0)                              (tot_Wee1 - init_Wee1p)
+    Wee1(c~P)                              init_Wee1p
+    IE(c~0)                                (tot_IE - init_IEp)
+    IE(c~P)                                init_IEp
+    APC(c~0)                               (tot_APC - init_APCact)
+    APC(c~Act)                             init_APCact
+end seed species
+
+begin observables
+    Molecules  Free_Cyclin   Cyclin(cdk1)
+    Molecules  MPF           Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P)
+    Molecules  preMPF        Cyclin(cdk1!1).Cdk1(cyclin!1,y~P,t~P)
+    Molecules  Cdc25_P       Cdc25(c~P)
+    Molecules  Wee1_P        Wee1(c~P)
+    Molecules  IE_P          IE(c~P)
+    Molecules  APC_Act       APC(c~Act)
+    Molecules  Total_Cyclin  Cyclin()
+    # conserved quantities (useful for debugging model)
+    Molecules  Total_Cdk1    Cdk1()
+    Molecules  Total_Wee1    Wee1()
+    Molecules  Total_Cdc25   Cdc25()
+    Molecules  Total_IE      IE()
+    Molecules  Total_APC     APC()
+end observables
+
+begin reaction rules
+    # (1) Cyclin synthesis
+    I() -> I() + Cyclin(cdk1)  k1
+    # (2) Free Cyclin degradation
+    Cyclin(cdk1) + APC(c~0)   -> APC(c~0)    V2_1
+    Cyclin(cdk1) + APC(c~Act) -> APC(c~Act)  V2_2
+    # (2') Bound Cyclin degradation (reset Cdk1 to non-phosphorylated state)
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~?,t~?) + APC(c~0)   -> Cdk1(cyclin!1,y~0,t~0) + APC(c~0)    V2_1
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~?,t~?) + APC(c~Act) -> Cdk1(cyclin!1,y~0,t~0) + APC(c~Act)  V2_2
+    # (3) Cyclin-Cdk1 binding (simultaneous t-site phosphorylation
+    Cyclin(cdk1) + Cdk1(cyclin,y~0,t~0)  ->  Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P)  k3
+    # Phosphorylation of MPF by Wee1
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~0) + Wee1(c~P) -> Cyclin(cdk1!1).Cdk1(cyclin!1,y~P) + Wee1(c~P)  Vwee_1
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~0) + Wee1(c~0) -> Cyclin(cdk1!1).Cdk1(cyclin!1,y~P) + Wee1(c~0)  Vwee_2
+    # Dephosphorylation of preMPF by Cdc25
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~P) + Cdc25(c~0) -> Cyclin(cdk1!1).Cdk1(cyclin!1,y~0) + Cdc25(c~0)  V25_1
+    Cyclin(cdk1!1).Cdk1(cyclin!1,y~P) + Cdc25(c~P) -> Cyclin(cdk1!1).Cdk1(cyclin!1,y~0) + Cdc25(c~P)  V25_2
+    # (A) Phosphorylation of Cdc25 by active MPF
+    Cdc25(c~0) + Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P) -> Cdc25(c~P) + Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P)  Sat(ka,Ka)
+    # (B) Dephosphorylation of Cdc25
+    Cdc25(c~P) -> Cdc25(c~0)  Sat(kb,Kb)
+    # (C) Activation of APC by IEp
+    APC(c~0) + IE(c~P) -> APC(c~Act) + IE(c~P)  Sat(kc,Kc)
+    # (D) Deactivation of APC
+    APC(c~Act) -> APC(c~0)  Sat(kd,Kd)
+    # (E) Phosphorylation of Wee1 by active MPF
+    Wee1(c~0) + Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P) -> Wee1(c~P) + Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P)  Sat(ke,Ke)
+    # (F) Dephosphorylation of Wee1
+    Wee1(c~P) -> Wee1(c~0)  Sat(kf,Kf)
+    # (G) Phosphorylation of IE by active MPF
+    IE(c~0) + Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P) -> IE(c~P) + Cyclin(cdk1!1).Cdk1(cyclin!1,y~0,t~P)  Sat(kg,Kg)
+    # (H) Dephosphorylation of IE
+    IE(c~P) -> IE(c~0)  Sat(kh,Kh)
+end reaction rules
+
+
+### ACTIONS ###
+# generate reaction network
+generate_network({overwrite=>1,max_iter=>25})
+# save initial conditions
+saveConcentrations()
+# run ODE simulation
+simulate_ode({suffix=>'ode',t_end=>600,n_steps=>600})
+# recall initial conditions
+resetConcentrations()
+# run SSA simulation
+simulate_ssa({suffix=>'ssa',t_end=>660,n_steps=>600})

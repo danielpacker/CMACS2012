@@ -16,14 +16,6 @@ use constant SB_PREFIX        => 'SB_';
 use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
 use constant SB_LOG_FILE      => 'scanbatch.log';
 
-# BNGL code for equilibrium
-#simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>100,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>1});
-use constant EQUIL_CODE       => qq(
-generate_network({overwrite => 1});
-simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
-saveConcentrations();
-);
-
 
 sub new {
   my $class = shift;
@@ -85,6 +77,15 @@ sub read_conf {
         {
           $current_model = $1;
           next; # nothing else to do
+        }
+        die "no model context" unless defined($current_model);
+
+        # Get specific settings for this model, if any
+        if (grep(/\w+\=\w+/, $line))
+        {
+          my ($key, $val) = split('\s*=\s*', $line);
+          $self->{'model_settings'}->{$key} = $val;
+          next;
         }
 
         #print "line: $line\n";
@@ -222,7 +223,15 @@ sub batch_scan {
         die "field $field not numeric" unless ($entry->{$field} =~ /^\d+$/);
       }
 
-      print $fh_copy "\n# Added by BatchScan - Equilibriation:" . EQUIL_CODE;
+      # BNGL code for equilibrium
+      my $eq_code = qq(
+      generate_network({overwrite => 1});
+      simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
+      saveConcentrations();
+      );
+
+      print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
+        if ($self->{'model_settings'}->{$model}->{'do_equilibriation'});
       print $fh_copy "\n# Added by BatchScan - Setting paramters for '$entry->{'param'}':\n";
 
       # Begin the BNGL runs
