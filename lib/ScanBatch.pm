@@ -237,27 +237,41 @@ sub batch_scan {
       # Begin the BNGL runs
       my $current_val = $entry->{'start_val'};
 
-      for my $run_num (1..$entry->{'num_runs'})
+      # Create run dir
+
+      for my $step_num (1..$entry->{'num_steps'})
       {
         my $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
-        my $srun= sprintf "%05d", $run_num;
-        if ($run_num > 1)
+
+        # Make dir for this concentraiton and do this step num_runs times
+        my $new_step_dir = $new_param_dir . '/' . $current_val;
+        mkdir ($new_step_dir) or die "Couldn't create step dir '$new_step_dir'! $?";
+
+        for my $run_num (1..$entry->{'num_runs'})
         {
-          print $fh_copy "resetConcentrations();\n";
-        }
-        print $fh_copy "setConcentration(\"$entry->{'param'}\", \"$current_val\");\n";
-        my $prefix = $new_param_dir . '/' . $entry->{'param'};
-        #print "PREFIX: $prefix\n";
-        my $t_end = 500;       
-        my $stead_state = 1;
-        my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
-        if ($steady_state)
-        {
-          $opt .= ",steady_state=>1";
-        }
-        print $fh_copy "simulate_ssa({$opt});\n";
+          my $srun= sprintf "%05d", $run_num;
+          if ($step_num > 1)
+          {
+            print $fh_copy "resetConcentrations();\n";
+          }
+          print $fh_copy "setConcentration(\"$entry->{'param'}\", \"$current_val\");\n";
+          my $prefix = $new_step_dir . '/' . $srun;
+          #print "PREFIX: $prefix\n";
+          my $t_end = 500;       
+          my $stead_state = 1;
+          my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
+          if ($steady_state)
+          {
+            $opt .= ",steady_state=>1";
+          }
+          print $fh_copy "simulate_ssa({$opt});\n";
+
+        } # done with runs
+
         $current_val += $delta;
-      }
+
+      } # done with all steps
+
     } # done with entries for this model
 
     close $fh_copy or die "Couldn't save file '$model_path_copy'! $?";
