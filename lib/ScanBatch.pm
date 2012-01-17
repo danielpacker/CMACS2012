@@ -17,9 +17,10 @@ use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
 use constant SB_LOG_FILE      => 'scanbatch.log';
 
 # BNGL code for equilibrium
+#simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>100,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>1});
 use constant EQUIL_CODE       => qq(
 generate_network({overwrite => 1});
-simulate_ode({suffix=>"equil",t_end=>100,n_steps=>100,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>1});
+simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
 saveConcentrations();
 );
 
@@ -86,7 +87,7 @@ sub read_conf {
           next; # nothing else to do
         }
 
-        print "line: $line\n";
+        #print "line: $line\n";
         # Read the individual params on this line
         my @fields = split(/\s*,\s*/, $line);
         my ($param, $start_val, $end_val, $num_steps) = @fields;
@@ -206,6 +207,13 @@ sub batch_scan {
     for my $entry (@extracted_entries)
     {
 
+      # Make a directory for this param
+      my $new_param_dir = SB_DATA_DIR . '/' . $model_basename . '/' . $entry->{'param'};
+      if (! -e $new_param_dir)
+      {
+        mkdir($new_param_dir) or die "Couldn't create dir '$new_param_dir'! $?";
+      }
+
       # Make sure all numeric fields are defined for this entry
       for my $field (qw/start_val end_val num_steps num_runs/)
       {
@@ -227,8 +235,9 @@ sub batch_scan {
         {
           print $fh_copy "resetConcentrations();\n";
         }
-        print $fh_copy "setParameter($entry->{'param'}, $current_val);\n";
-        my $prefix = $entry->{'param'};
+        print $fh_copy "setConcentration($entry->{'param'}, $current_val);\n";
+        my $prefix = $new_param_dir . '/' . $entry->{'param'};
+        print "PREFIX: $prefix\n";
         my $t_end = 500;       
         my $stead_state = 1;
         my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
@@ -247,7 +256,7 @@ sub batch_scan {
     print "Running BioNetGen on '$model_path_copy'\n";
     my $exec = BNG_PATH . '/Perl2/BNG2.pl';
     my $logfile = SB_DATA_DIR . '/' . SB_LOG_FILE;
-    #system("$exec $model_path_copy > $logfile");
+    system("$exec $model_path_copy > $logfile");
 
     # Move generated data files to appropriate directory
     
