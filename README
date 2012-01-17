@@ -51,7 +51,7 @@ sb_data/
 			species_name_2_0002.gdat
 			...
 
-The log file contains the output of BNG2.pl (bionetgen).
+There are as many models, species, and numbered files as specified in the config file. The log file contains the output of BNG2.pl (bionetgen).
 
 In addition to all of the gdat files (and cdat files), other files may be created, as specified in your model file.
 
