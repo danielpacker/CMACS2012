@@ -54,7 +54,7 @@ sub read_conf {
     {
       die "file '$filename' not found!";
     } else {
-      open ($fh, "<$filename") or die "Couldn't open file '$filename'! $!";
+      open ($fh, "<$filename") or die "Couldn't open file '$filename'! $?";
 
       for my $line (<$fh>)
       {
@@ -90,7 +90,7 @@ sub read_conf {
         #print "[$param] [$start_val] [$end_val] [$num_steps]\n";
       }      
 
-      close $fh or die "$!";
+      close $fh or die "Error: $?";
 
       # copy the config entries to object
       $self->{'config_entries'} = [@config_entries];
@@ -123,9 +123,7 @@ sub dump {
 #
 # Take all of the config entries and do the appropriate scans!
 #  
-# For var1, create a TLD called var1/
-#   go into var1/
-#   we're going to generate BNGL commands 
+#   
 
 sub batch_scan {
 
