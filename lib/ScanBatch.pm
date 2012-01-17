@@ -210,22 +210,21 @@ sub batch_scan {
       for my $run_num (1..$entry->{'num_runs'})
       {
         my $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
-  #print "DELTA for $entry->{'param'}: $delta";
         my $srun= sprintf "%05d", $run_num;
         if ($run_num > 1)
         {
           print $fh_copy "resetConcentrations();\n";
         }
-        printf $fh_copy "setParameter($entry->{'param'}, $current_val);\n";
+        print $fh_copy "setParameter($entry->{'param'}, $current_val);\n";
         my $prefix = '';
         my $t_end = 500;       
         my $stead_state = 1;
-        my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'}";
+        my $opt= "prefix=>\"$prefix\",suffix=>\"$srun\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
         if ($steady_state)
         {
           $opt .= ",steady_state=>1";
         }
-        printf $fh_copy "simulate_ode({$opt});\n";
+        print $fh_copy "simulate_ssa({$opt});\n";
         $current_val += $delta;
       }
     } # done with entries for this model
