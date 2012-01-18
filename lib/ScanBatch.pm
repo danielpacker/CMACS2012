@@ -225,7 +225,8 @@ sub batch_scan {
       }
 
       # BNGL code for equilibrium
-      my $eq_code = qq(generate_network({overwrite => 1});
+      my $eq_code = qq(
+generate_network({overwrite => 1});
 simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
 saveConcentrations();
 );
