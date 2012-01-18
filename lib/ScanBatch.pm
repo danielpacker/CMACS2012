@@ -281,9 +281,14 @@ saveConcentrations();
 
     # Run BioNetGen on file
     print "\nRunning BioNetGen on '$model_path_copy'\n";
+   
+    # Search for the BNG2.pl file 
+    #  (BNG 2.1.7 and 2.1.8 keep the .pl in diff places)
     my $exec = BNG_PATH . '/Perl2/BNG2.pl';
-    my $logfile = SB_DATA_DIR . '/' . SB_LOG_FILE;
-    system("$exec $model_path_copy > $logfile");
+    $exec = BNG_PATH . '/BNG2.pl' if (! -e $exec);
+
+    my $logfile = SB_DATA_DIR . '/' . SB_LOG_FILE; # save output of BNG2.pl
+    system("$exec $model_path_copy > $logfile"); # Run BNG2.pl
 
   } # done with this model, next model...
   
