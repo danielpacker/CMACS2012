@@ -8,17 +8,24 @@ package ScanBatch;
 
 use File::Copy;
 
-use constant VALID_PARAMS      => qw/config_file/;
-use constant DEFAULT_NUM_RUNS  => 100;
-use constant MODEL_DIR         => $ENV{'SB_MODEL_DIR'} || '.';
-use constant SB_DATA_DIR       => $ENV{'SB_DATA_DIR'} || './sb_data';
-use constant SB_PREFIX         => 'SB_';
-use constant BNG_PATH          => $ENV{'BNGPATH'} || '.';
-use constant SB_LOG_FILE       => 'scanbatch.log';
-use constant DEFAULT_DO_EQ     => 1;
-use constant DEFAULT_T_END     => 500;
-use constant DEFAULT_N_STEPS   => 250;
-use constant DEFAULT_DO_SPARSE => 1;
+use constant VALID_PARAMS         => qw/config_file/;
+use constant DEFAULT_NUM_RUNS     => 100;
+use constant MODEL_DIR            => $ENV{'SB_MODEL_DIR'} || '.';
+use constant SB_DATA_DIR          => $ENV{'SB_DATA_DIR'} || './sb_data';
+use constant SB_PREFIX            => 'SB_';
+use constant BNG_PATH             => $ENV{'BNGPATH'} || '.';
+use constant SB_LOG_FILE          => 'scanbatch.log';
+use constant DEFAULT_DO_EQ        => 1;
+use constant DEFAULT_T_END        => 500;
+use constant DEFAULT_N_STEPS      => 250;
+use constant DEFAULT_DO_SPARSE    => 1;
+use constant DEFAULT_MOD_SETTINGS => ( 't_end'        => 500,
+                                       'n_steps'      => 250,
+                                       'do_sparse'    => 1,
+                                       'eq_t_end'     => 10000,
+                                       'eq_n_steps'   => 100000,
+                                       'eq_do_sparse' => 10000,
+                                      );
 
 
 sub new {
@@ -227,31 +234,24 @@ sub batch_scan {
         die "field $field not numeric" unless ($entry->{$field} =~ /^\d+$/);
       }
 
+      # retrieve per-model config settings
+      my %msettings = DEFAULT_MOD_SETTINGS; # get default model settings
+      for my $msetting (keys %msettings)
+      {
+        $msettings{$msetting} = defined($self->{'model_settings'}->{$model}->{$msetting}) ? 
+        $self->{'model_settings'}->{$model}->{$msetting} : $msettings{$msetting};
+      }
+
       # BNGL code for equilibrium
+      my $eq_prefix = '';
+      my $eq_suffix = '';
       my $eq_code = qq(
 generate_network({overwrite => 1});
-simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>0});
+simulate_ode({prefix="$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t_end'},n_steps=>$msettings{'eq_n_steps'},atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>$msettings{'eq_do_sparse'});
 saveConcentrations();
 );
-
-      # handle do_eq conf setting
-      my $do_eq = defined($self->{'model_settings'}->{$model}->{'do_eq'}) ? 
-        $self->{'model_settings'}->{$model}->{'do_eq'} : DEFAULT_DO_EQ;
-
-      # handle t_end conf setting
-      my $t_end = defined($self->{'model_settings'}->{$model}->{'t_end'}) ? 
-        $self->{'model_settings'}->{$model}->{'t_end'} : DEFAULT_T_END;
-
-      # handle n_steps conf setting
-      my $n_steps = defined($self->{'model_settings'}->{$model}->{'n_steps'}) ? 
-        $self->{'model_settings'}->{$model}->{'n_steps'} : DEFAULT_N_STEPS;
-
-      # handle n_steps conf setting
-      my $do_sparse = defined($self->{'model_settings'}->{$model}->{'do_sparse'}) ? 
-        $self->{'model_settings'}->{$model}->{'do_sparse'} : DEFAULT_DO_SPARSE;
-
       print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
-        if ($do_eq);
+        if ($msettings{'do_eq'});
       print $fh_copy "\n# Added by BatchScan - Setting paramters for '$entry->{'param'}':\n";
 
       # Begin the BNGL runs
@@ -282,7 +282,7 @@ saveConcentrations();
           my $prefix = $new_step_dir . '/' . $srun;
           print "PREFIX: $prefix\n";
           my $stead_state = 1;
-          my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$t_end,n_steps=>$n_steps,output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$do_sparse";
+          my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$msettings{'t_end'},n_steps=>$msettings{'n_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$msettings{'do_sparse'}";
           if ($steady_state)
           {
             $opt .= ",steady_state=>1";
@@ -293,7 +293,7 @@ saveConcentrations();
 
         $current_val += $delta;
 
-      } # done with all steps
+     } # done with all steps
 
     } # done with entries for this model
 
