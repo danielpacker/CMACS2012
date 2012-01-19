@@ -8,14 +8,17 @@ package ScanBatch;
 
 use File::Copy;
 
-use constant VALID_PARAMS     => qw/config_file/;
-use constant DEFAULT_NUM_RUNS => 100;
-use constant MODEL_DIR        => $ENV{'SB_MODEL_DIR'} || '.';
-use constant SB_DATA_DIR      => $ENV{'SB_DATA_DIR'} || './sb_data';
-use constant SB_PREFIX        => 'SB_';
-use constant BNG_PATH         => $ENV{'BNGPATH'} || '.';
-use constant SB_LOG_FILE      => 'scanbatch.log';
-use constant DEFAULT_DO_EQ    => 1;
+use constant VALID_PARAMS      => qw/config_file/;
+use constant DEFAULT_NUM_RUNS  => 100;
+use constant MODEL_DIR         => $ENV{'SB_MODEL_DIR'} || '.';
+use constant SB_DATA_DIR       => $ENV{'SB_DATA_DIR'} || './sb_data';
+use constant SB_PREFIX         => 'SB_';
+use constant BNG_PATH          => $ENV{'BNGPATH'} || '.';
+use constant SB_LOG_FILE       => 'scanbatch.log';
+use constant DEFAULT_DO_EQ     => 1;
+use constant DEFAULT_T_END     => 500;
+use constant DEFAULT_N_STEPS   => 250;
+use constant DEFAULT_DO_SPARSE => 1;
 
 
 sub new {
@@ -231,8 +234,21 @@ simulate_ode({suffix=>"equil",t_end=>100000,n_steps=>10000,atol=>1e-10,rtol=>1e-
 saveConcentrations();
 );
 
+      # handle do_eq conf setting
       my $do_eq = defined($self->{'model_settings'}->{$model}->{'do_eq'}) ? 
         $self->{'model_settings'}->{$model}->{'do_eq'} : DEFAULT_DO_EQ;
+
+      # handle t_end conf setting
+      my $t_end = defined($self->{'model_settings'}->{$model}->{'t_end'}) ? 
+        $self->{'model_settings'}->{$model}->{'t_end'} : DEFAULT_T_END;
+
+      # handle n_steps conf setting
+      my $n_steps = defined($self->{'model_settings'}->{$model}->{'n_steps'}) ? 
+        $self->{'model_settings'}->{$model}->{'n_steps'} : DEFAULT_N_STEPS;
+
+      # handle n_steps conf setting
+      my $do_sparse = defined($self->{'model_settings'}->{$model}->{'do_sparse'}) ? 
+        $self->{'model_settings'}->{$model}->{'do_sparse'} : DEFAULT_DO_SPARSE;
 
       print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
         if ($do_eq);
@@ -245,7 +261,11 @@ saveConcentrations();
 
       for my $step_num (1..$entry->{'num_steps'})
       {
-        my $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
+        my $delta = 0; # Allow use of a single value for start/end
+        if ($entry->{'end_val'} != $entry->{'start_val'})
+        {
+          $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
+        }
 
         # Make dir for this concentraiton and do this step num_runs times
         my $new_step_dir = $new_param_dir . '/' . $current_val;
@@ -260,10 +280,9 @@ saveConcentrations();
           }
           print $fh_copy "setConcentration(\"$entry->{'param'}\", \"$current_val\");\n";
           my $prefix = $new_step_dir . '/' . $srun;
-          #print "PREFIX: $prefix\n";
-          my $t_end = 500;       
+          print "PREFIX: $prefix\n";
           my $stead_state = 1;
-          my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$t_end,n_steps=>$entry->{'num_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>1";
+          my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$t_end,n_steps=>$n_steps,output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$do_sparse";
           if ($steady_state)
           {
             $opt .= ",steady_state=>1";
