@@ -7,10 +7,12 @@ use lib './lib';
 
 use ScanBatch;
 
-use constant CONF_FILE => (scalar(@ARGV)==0) ? 'sb.conf' : $ARGV[0];
+use constant CONF_DIR     => './conf/';
+use constant CONF_FILE    => 'sb.conf';
+use constant CONF_DEFAULT => (scalar(@ARGV)==0) ? CONF_DIR . CONF_FILE : $ARGV[0];
 
 my $sb = ScanBatch->new(
-  'config_file' => CONF_FILE,
+  'config_file' => CONF_DEFAULT
 );
 
 # Show state of object (data from config file)

@@ -8,6 +8,7 @@ package ScanBatch;
 
 use File::Copy;
 
+use constant EXP                  => 2.71828183;
 use constant VALID_PARAMS         => qw/config_file/;
 use constant DEFAULT_NUM_RUNS     => 100;
 use constant MODEL_DIR            => $ENV{'SB_MODEL_DIR'} || '.';
@@ -19,13 +20,16 @@ use constant DEFAULT_DO_EQ        => 1;
 use constant DEFAULT_T_END        => 500;
 use constant DEFAULT_N_STEPS      => 250;
 use constant DEFAULT_DO_SPARSE    => 1;
-use constant DEFAULT_MOD_SETTINGS => ( 't_end'        => 500,
+use constant DEFAULT_MOD_SETTINGS => ( 'do_eq'        => 1,
+                                       'dist'         => 'even',
+                                       't_end'        => 500,
                                        'n_steps'      => 250,
                                        'do_sparse'    => 1,
                                        'eq_t_end'     => 10000,
                                        'eq_n_steps'   => 100000,
                                        'eq_do_sparse' => 10000,
                                       );
+
 
 
 sub new {
@@ -147,6 +151,12 @@ sub dump {
   for my $model (keys %{ $self->{'config_entries'} })
   {
     print "Model '$model':\n";
+
+    # dump the model-specific settings
+    for my $msetting (keys %{ $self->{'model_settings'}->{$model} })
+    {
+      print "$msetting = " . $self->{'model_settings'}->{$model}->{$msetting} . "\n";
+    }
     my @entries = @{ $self->{'config_entries'}->{$model} };
     for my $entry (@entries)
     {
@@ -196,9 +206,8 @@ sub batch_scan {
     my $script = "";
     while(<$fh>)
     {
+      last if (/\s*end\s*model\s*/); # skip actions after model definition
       $script .= $_;
-      # Skip actions
-      last if (/^\s*end\s*model\s*$/);
     }
     close $fh or die "Couldn't close file '$model_path'! $?";
 
@@ -238,34 +247,79 @@ sub batch_scan {
       my %msettings = DEFAULT_MOD_SETTINGS; # get default model settings
       for my $msetting (keys %msettings)
       {
+        #print "MSETTING: $msetting\n";
         $msettings{$msetting} = defined($self->{'model_settings'}->{$model}->{$msetting}) ? 
-        $self->{'model_settings'}->{$model}->{$msetting} : $msettings{$msetting};
+          $self->{'model_settings'}->{$model}->{$msetting} : $msettings{$msetting};
       }
 
       # BNGL code for equilibrium
-      my $eq_prefix = '';
+      my $eq_prefix = $new_model_dir;
       my $eq_suffix = '';
       my $eq_code = qq(
 generate_network({overwrite => 1});
-simulate_ode({prefix="$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t_end'},n_steps=>$msettings{'eq_n_steps'},atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>$msettings{'eq_do_sparse'});
-saveConcentrations();
+simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t_end'},n_steps=>$msettings{'eq_n_steps'},atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>$msettings{'eq_do_sparse'}});
 );
       print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
         if ($msettings{'do_eq'});
+      print $fh_copy "\n# Added by BatchScan - Save Concentrations:\n" . "saveConcentrations();\n";
       print $fh_copy "\n# Added by BatchScan - Setting paramters for '$entry->{'param'}':\n";
 
       # Begin the BNGL runs
       my $current_val = $entry->{'start_val'};
+      my $run_count = 0;
 
-      # Create run dir
+      
+      # use num_steps for even distribution, but for exp dist. use it as exp coeff
+      my $num_steps = $entry->{'num_steps'};
 
-      for my $step_num (1..$entry->{'num_steps'})
+      if (my $dist = $msettings{'dist'}) # exponential distribution
+      {
+        if ($dist eq 'exp')
+        {
+          $num_steps = int(log($entry->{'end_val'}));
+        }
+        if ($dist eq 'exp10')
+        {
+          $num_steps = int(log10($entry->{'end_val'}));
+        }
+      }
+      #print "NUM_STEPS: $num_steps\n";
+
+      for my $step_num (1..$num_steps)
       {
         my $delta = 0; # Allow use of a single value for start/end
         if ($entry->{'end_val'} != $entry->{'start_val'})
         {
-          $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
+          # use num_steps as an exponent rater than a number of steps
+          # If we're doing exponential interpret config values:
+          # start = base number
+          # end   = max number
+          # steps = exponent coeffecient
+          # runs = runs (no change)
+          if (my $dist = $msettings{'dist'}) # exponential distribution
+          {
+            if (($dist eq 'exp') || ($dist eq 'exp10'))
+            {
+              my $exp = ($dist eq 'exp') ? EXP : 10;
+              my $current_val = $entry->{'start_val'} * ($exp ** $run_count);
+              $delta=0;
+            }
+            elsif ($dist eq 'even')
+            { # default
+              my $next_step = ($entry->{'num_steps'} == 1) ? 1 : $entry->{'num_steps'} - 1;
+              $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / $next_step;
+            }
+            else
+            {
+              die "Invalid distribtution type. Valid types: 'exp', 'exp10', 'even'";
+            }
+          }
+          else 
+          {
+            die "No distribution type specified.";
+          }
         }
+        #print "CURRENT VAL: $current_val\n";
 
         # Make dir for this concentraiton and do this step num_runs times
         my $new_step_dir = $new_param_dir . '/' . $current_val;
@@ -276,11 +330,11 @@ saveConcentrations();
           my $srun= sprintf "%05d", $run_num;
           if ($step_num > 1)
           {
-            print $fh_copy "resetConcentrations();\n";
+            print $fh_copy "resetConcentrations();\n\n";
           }
-          print $fh_copy "setConcentration(\"$entry->{'param'}\", \"$current_val\");\n";
+          print $fh_copy "setConcentration(\"$entry->{'param'}\", $current_val);\n";
           my $prefix = $new_step_dir . '/' . $srun;
-          print "PREFIX: $prefix\n";
+          #print "PREFIX: $prefix\n";
           my $stead_state = 1;
           my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$msettings{'t_end'},n_steps=>$msettings{'n_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$msettings{'do_sparse'}";
           if ($steady_state)
@@ -292,6 +346,9 @@ saveConcentrations();
         } # done with runs
 
         $current_val += $delta;
+        $run_count++;
+
+        last if ($current_val > $entry->{'end_val'}); # past range!
 
      } # done with all steps
 
@@ -314,5 +371,10 @@ saveConcentrations();
   
   print "\nScanBatch is DONE!\n";
 }
+
+sub log10 {
+  my $n = shift;
+  return log($n)/log(10);
+} 
 
 1;
