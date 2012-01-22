@@ -41,7 +41,55 @@ the BNG that comes with my copy of rulebender.
 
 === CONFIG FILE ===
 
-See sb.conf that comes with your installation for info.
+FORMAT:
+
+  [model_file.bngl]
+  option=value
+  ... more options ...
+  SPECIES: START, END, STEPS, RUNS
+  ... more species ...
+... more models ...
+
+When the distribution is even, the parameters for each species are as specified above.
+
+When the distribution is exponential, the paramters for each species are:
+
+ SPECIES: COEFF, BASE, MAX_EXP, RUNS
+
+So that the function to generate the range is:
+
+  f(x) = (COEFF * (BASE ^ x)) where x is 0 through MAX_EXP
+
+
+OPTIONS:
+
+  dist - Distribution of concentrations. 'exp' or 'even'. Default is 'even'.
+
+  t_end - Time of simulations in seconds. Default is 500.
+
+  n_steps - Steps in simulations. Default is 250.
+
+  do_eq - Perform an equilibration simulation. 1 or 0. Default is 1.
+
+  do_sparse - Do a sparse simulation? 1 or 0. Default is 0.
+
+  steady - Attempt to reach steady state? 1 or 0. Default is 1.
+
+  eq_t_end - Time of equilibration simulation. Default is 1e4.
+
+  eq_n_steps - Steps in simulation for equilibration. Default is 1e5.
+
+  eq_stead - Attempt to reach steady state in equilibration? 1 or 0. Default is 1.
+
+  eq_do_sparse - Do a sparse simulation for equilibration? 1 or 0. Default is 1. 
+
+EXMAPLES:
+
+  [mymodel.bngl]
+  do_eq=0
+  Ligand(l,l): 0, 10, 11, 100
+  MyOtherParam: 0, 5, 50
+
 
 === DATA FILES ===
 

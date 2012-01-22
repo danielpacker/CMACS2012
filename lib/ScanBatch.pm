@@ -1,4 +1,3 @@
-#!/usr/bin/perl -w
 #
 # ScanBatch: Do batch simulations with BioNetGen for data collection
 # by Daniel Packer
@@ -11,7 +10,11 @@ use warnings;
 
 use File::Copy;
 
-use constant PI                   => 3.14159265;
+##############################################################################
+# PROGRAM CONSTANTS:
+#
+use constant SB_CONSTANTS         => ('e'  => exp(1),
+                                      'pi' => 3.14159265);
 use constant VALID_PARAMS         => qw/config_file/;
 use constant DEFAULT_NUM_RUNS     => 100;
 use constant MODEL_DIR            => $ENV{'SB_MODEL_DIR'} || '.';
@@ -36,6 +39,8 @@ use constant DEFAULT_MDL_SETTINGS => { 'do_eq'        => 1,
                                      };
 
 
+##############################################################################
+# SCAN BATCH OBJECT:
 
 sub new {
   my $class = shift;
@@ -105,7 +110,7 @@ sub read_conf {
         if (grep(/\w+\=\w+/, $line))
         {
           my ($key, $val) = split('\s*=\s*', $line);
-          $self->{'model_settings'}->{$current_model}->{$key} = $val;
+          $self->{'model_settings'}->{$current_model}->{$key} = $self->process_param($val);
           next;
         }
 
@@ -113,7 +118,7 @@ sub read_conf {
         # Read the individual params on this line
         my ($param, $fields) = split(/\:\s*/, $line);
         my @fields = split(/\s*,\s*/, $fields);
-        my ($start_val, $end_val, $num_steps) = @fields;
+        my ($start_val, $end_val, $num_steps) = map { $self->process_param($_) } @fields;
         my $num_runs = (scalar(@fields) == 4) ? pop (@fields) : DEFAULT_NUM_RUNS;
 
         my %config_entry = (
@@ -125,17 +130,6 @@ sub read_conf {
           'num_runs'  => $num_runs,
         );
 
-#        # Process numerical values (sci. notation, constants, etc.)
-#        for my $entry (keys %config_entries)
-#        {
-#          for my $field (qw/start_val
-#          {
-#            $config_entries{$entry}
-#            die "Config error: field '$field' not defined" unless defined($entry->{$field});
-#            die "Config error: field '$field' not numeric" unless 
-#          }
-#        }
-#
         # Organize entries by model name
         if (! exists($self->{'config_entries'}->{$current_model}) )
         {
@@ -191,12 +185,7 @@ sub dump {
 }
 
 
-####
-#
 # Take all of the config entries and do the appropriate scans!
-#  
-#   
-
 sub batch_scan {
 
   my $self = shift or die "Call via object!";
@@ -357,6 +346,42 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
   print "\nScanBatch is DONE!\n";
 }
 
+# Process config parameters
+sub process_param {
+  my $self = shift or die "Call via object!";
+  my $param = shift;
+  die "No param defined" unless defined($param);
+
+  my $processed = $param; # default
+
+  # we can handle scientific notation natively in perl but it's
+  #  hard to tell what we're working with (even with POSIX module)
+  #  so we implement our own sci notation code
+  if (is_sci($param)) # is it scientific notation?
+  {
+    $processed = sci2dec($param);
+  }
+  elsif (is_const($param)) # is it a constant
+  {
+    $processed = unconst($param);
+  }
+  elsif (is_num($param)) # is it a number
+  {
+  }
+  elsif (grep $param, qw/exp even/) # other
+  {
+  }
+  else # we didn't recognize the param format!
+  {
+    die "Invalid paramter: '$param'!";
+  }
+  return $processed;
+}
+
+
+##############################################################################
+# UTILITY FUNCTIONS:
+ 
 # Return log(n) to a specific base, or natural log if no base provided.
 sub log_base {
   my $n = shift;
@@ -376,30 +401,55 @@ sub unconst {
   my $n = shift;
   die "No number provided" unless defined($n);
 
-  my %constants = (
-    'e' => exp(1),
-    'pi' => PI,
-  );
-
   # Is this a constant?
-  if (grep /$n/i, (keys %constants))
+  my %cons = SB_CONSTANTS;
+  if (grep /$n/i, (keys %cons))
   {
-    return $constants{lc($n)};
+    return $cons{lc($n)};
   } else {
     die "Invalid constant: '$n'!";
   }
 }
 
+# Is this a defined constant?
+sub is_const {
+  my $n = shift;
+  die "No number provided" unless defined($n);
+  my %cons = SB_CONSTANTS;
+  return grep /$n/i, (keys %cons);
+}
+
+
 # Convert number in scientific notation to decimal
 sub sci2dec {
   my $n = shift;
   die "No number provided" unless defined($n);
-
+  
+  my ($base, $exp) = is_sci($n);
+  print "BASE: $base, EXP $exp\n";
   die "Invalid scientific notation formation for '$n'!"
-    unless ($n =~ /^(\-?\d+\.?\d*)[eE](\-?\d+\.?\d*)$/);
-  print "1: $1, 2: $2\n";
+    unless (defined($base) and defined($exp));
+
+  return ($base * (10 ** $exp));
 }
 
+# Is this a scientific notation number?
+sub is_sci {
+  my $n = shift;
+  print "N: $n\n";
+  die "No number provided" unless defined($n);
+  if ($n =~ /^(\-?\d+\.?\d*)[eE]+(\-?\d+\.?\d*)$/)
+  {
+    return $1, $2;
+  }
+}
 
+# Is this a decimal number?
+sub is_num {
+  my $n = shift;
+  die "No number provided" unless defined($n);
+  return ($n =~ /^\d+\.?\d*$/);
+}
+ 
 
 1;
