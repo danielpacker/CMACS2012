@@ -142,6 +142,8 @@ created, as specified in your model file.
 * Save data files in a timestamped directory so we can avoid overwriting old data
 * Add module for generation of R histograms from time series data in data files
   - See above about time-series data
+* Expand parameter options to per-entry options (so that ranges can be either even or exponential per entry, for example)
+* Combinatorial species, so that you can combine use multiple range sof multiple species simultaneously
 
 * DONE: Allow config to specify a range with a custom exponential function
   (specify base and exponent. ex. X^(Yi) where i is the iteration
