@@ -6,9 +6,12 @@
 
 package ScanBatch;
 
+use strict;
+use warnings;
+
 use File::Copy;
 
-use constant EXP                  => 2.71828183;
+use constant PI                   => 3.14159265;
 use constant VALID_PARAMS         => qw/config_file/;
 use constant DEFAULT_NUM_RUNS     => 100;
 use constant MODEL_DIR            => $ENV{'SB_MODEL_DIR'} || '.';
@@ -20,15 +23,17 @@ use constant DEFAULT_DO_EQ        => 1;
 use constant DEFAULT_T_END        => 500;
 use constant DEFAULT_N_STEPS      => 250;
 use constant DEFAULT_DO_SPARSE    => 1;
-use constant DEFAULT_MOD_SETTINGS => ( 'do_eq'        => 1,
+use constant DEFAULT_MDL_SETTINGS => { 'do_eq'        => 1,
                                        'dist'         => 'even',
                                        't_end'        => 500,
                                        'n_steps'      => 250,
+                                       'steady'       => 0,
                                        'do_sparse'    => 1,
                                        'eq_t_end'     => 10000,
                                        'eq_n_steps'   => 100000,
                                        'eq_do_sparse' => 10000,
-                                      );
+                                       'eq_steady'    => 1,
+                                     };
 
 
 
@@ -67,7 +72,7 @@ sub read_conf {
 
   my $self = shift or die "Call via object!";
 
-  my %config_entries = ();
+  my %config_entries = (); # hold species entries indexed by model
 
   my $current_model = '';
 
@@ -77,7 +82,7 @@ sub read_conf {
     {
       die "file '$filename' not found!";
     } else {
-      open ($fh, "<$filename") or die "Couldn't open file '$filename'! $?";
+      open (my $fh, "<$filename") or die "Couldn't open file '$filename'! $!";
 
       for my $line (<$fh>)
       {
@@ -96,6 +101,7 @@ sub read_conf {
         die "no model context" unless defined($current_model);
 
         # Get specific settings for this model, if any
+        $self->{'model_settings'}->{$current_model} = DEFAULT_MDL_SETTINGS;
         if (grep(/\w+\=\w+/, $line))
         {
           my ($key, $val) = split('\s*=\s*', $line);
@@ -116,25 +122,38 @@ sub read_conf {
           'start_val' => $start_val,
           'end_val'   => $end_val,
           'num_steps' => $num_steps,
-          'num_runs'  => $num_runs
-          );
+          'num_runs'  => $num_runs,
+        );
 
+#        # Process numerical values (sci. notation, constants, etc.)
+#        for my $entry (keys %config_entries)
+#        {
+#          for my $field (qw/start_val
+#          {
+#            $config_entries{$entry}
+#            die "Config error: field '$field' not defined" unless defined($entry->{$field});
+#            die "Config error: field '$field' not numeric" unless 
+#          }
+#        }
+#
         # Organize entries by model name
-        if (! exists($config_entries{$config_entry{'model'}}) )
+        if (! exists($self->{'config_entries'}->{$current_model}) )
         {
-          $config_entries{$config_entry{'model'}} = [];
+          $self->{'config_entries'}->{$current_model} = [];
         }
-        push @{ $config_entries{$config_entry{'model'}} }, \%config_entry;
+        push @{ $self->{'config_entries'}->{$current_model} }, \%config_entry;
         #print "[$param] [$start_val] [$end_val] [$num_steps]\n";
-      }      
 
-      close $fh or die "Error: $?";
+      } # end loop through lines     
 
-      # copy the config entries to object
-      $self->{'config_entries'} = {%config_entries};
-    }
-  }
-}
+      close $fh or die "Error: $!";
+
+    } # end if file exists
+
+  } # end if config
+
+} # end sub
+
 
 # Print the internal state of the object (data from config)
 sub dump {
@@ -153,13 +172,16 @@ sub dump {
     print "Model '$model':\n";
 
     # dump the model-specific settings
-    for my $msetting (keys %{ $self->{'model_settings'}->{$model} })
-    {
-      print "$msetting = " . $self->{'model_settings'}->{$model}->{$msetting} . "\n";
-    }
+    print 'SETTINGS: ' . join(", ", 
+      map { $_ . ': ' . $self->{'model_settings'}->{$model}->{$_} } (
+        keys %{ $self->{'model_settings'}->{$model} }
+      )
+    ) . "\n";
+    
     my @entries = @{ $self->{'config_entries'}->{$model} };
     for my $entry (@entries)
     {
+      print "SPECIES ENTRY: ";
       print join (", ", (map { $_ . ': ' . $entry->{$_} } (keys %$entry)));
       print "\n";
     }
@@ -184,7 +206,7 @@ sub batch_scan {
   # Create data dir
   if (! -e SB_DATA_DIR)
   {
-    mkdir(SB_DATA_DIR) or die "Couldn't create data dir'! $?";
+    mkdir(SB_DATA_DIR) or die "Couldn't create data dir'! $!";
   }
 
   # Work on one model at a time
@@ -199,26 +221,26 @@ sub batch_scan {
     # Create a subdirectory for this model
     my ($model_basename, $ext) = split('\.', $model);
     my $new_model_dir = SB_DATA_DIR . '/' . $model_basename; 
-    mkdir($new_model_dir) or die "Couldn't mkdir '$new_model_dir'! $?";
+    mkdir($new_model_dir) or die "Couldn't mkdir '$new_model_dir'! $!";
 
     # Make a local copy of this config file & read the bngl script into memory
-    open($fh, "<$model_path") or die "Couldn't open file '$model_path'! $?";
+    open(my $fh, "<$model_path") or die "Couldn't open file '$model_path'! $!";
     my $script = "";
     while(<$fh>)
     {
       last if (/\s*end\s*model\s*/); # skip actions after model definition
       $script .= $_;
     }
-    close $fh or die "Couldn't close file '$model_path'! $?";
+    close $fh or die "Couldn't close file '$model_path'! $!";
 
     if (! -e SB_DATA_DIR) # Create temp dir
     {
-      mkdir(SB_DATA_DIR) or die "Couldn't create temp dir '" . SB_DATA_DIR . " $?";
+      mkdir(SB_DATA_DIR) or die "Couldn't create temp dir '" . SB_DATA_DIR . " $!";
     }
 
     # Make local copy of model file to modify
     my $model_path_copy = SB_DATA_DIR . '/' . $model_basename . '/' . SB_PREFIX . $model;
-    open($fh_copy, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $?";
+    open(my $fh_copy, ">$model_path_copy") or die "Couldn't create file '$model_path_copy'! $!";
     print $fh_copy $script;
 
     # Process the config entries for this model
@@ -233,31 +255,18 @@ sub batch_scan {
       my $new_param_dir = SB_DATA_DIR . '/' . $model_basename . '/' . $entry->{'param'};
       if (! -e $new_param_dir)
       {
-        mkdir($new_param_dir) or die "Couldn't create dir '$new_param_dir'! $?";
+        mkdir($new_param_dir) or die "Couldn't create dir '$new_param_dir'! $!";
       }
 
-      # Make sure all numeric fields are defined for this entry
-      for my $field (qw/start_val end_val num_steps num_runs/)
-      {
-        die "field $field not defined" unless defined($entry->{$field});
-        die "field $field not numeric" unless ($entry->{$field} =~ /^\d+$/);
-      }
-
-      # retrieve per-model config settings
-      my %msettings = DEFAULT_MOD_SETTINGS; # get default model settings
-      for my $msetting (keys %msettings)
-      {
-        #print "MSETTING: $msetting\n";
-        $msettings{$msetting} = defined($self->{'model_settings'}->{$model}->{$msetting}) ? 
-          $self->{'model_settings'}->{$model}->{$msetting} : $msettings{$msetting};
-      }
+      my %msettings = %{ $self->{'model_settings'}->{$model} };
+      #use Data::Dumper; print "$model MSETTINGS!!!!! " . Dumper \%msettings;
 
       # BNGL code for equilibrium
       my $eq_prefix = $new_model_dir;
       my $eq_suffix = '';
       my $eq_code = qq(
 generate_network({overwrite => 1});
-simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t_end'},n_steps=>$msettings{'eq_n_steps'},atol=>1e-10,rtol=>1e-8,steady_state=>1,sparse=>$msettings{'eq_do_sparse'}});
+simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t_end'},n_steps=>$msettings{'eq_n_steps'},atol=>1e-10,rtol=>1e-8,steady_state=>$msettings{'eq_steady'},sparse=>$msettings{'eq_do_sparse'}});
 );
       print $fh_copy "\n# Added by BatchScan - Equilibriation:" . $eq_code
         if ($msettings{'do_eq'});
@@ -268,40 +277,27 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
       my $current_val = $entry->{'start_val'};
       my $run_count = 0;
 
-      
-      # use num_steps for even distribution, but for exp dist. use it as exp coeff
       my $num_steps = $entry->{'num_steps'};
-
-      if (my $dist = $msettings{'dist'}) # exponential distribution
-      {
-        if ($dist eq 'exp')
-        {
-          $num_steps = int(log($entry->{'end_val'}));
-        }
-        if ($dist eq 'exp10')
-        {
-          $num_steps = int(log10($entry->{'end_val'}));
-        }
-      }
-      #print "NUM_STEPS: $num_steps\n";
 
       for my $step_num (1..$num_steps)
       {
         my $delta = 0; # Allow use of a single value for start/end
+
+        # Convert known constants to numerical values
+        $entry->{'end_val'} = grep($entry->{'end_val'}, qw/e E/) ? exp(1) : $entry->{'end_val'};
+
         if ($entry->{'end_val'} != $entry->{'start_val'})
         {
-          # use num_steps as an exponent rater than a number of steps
           # If we're doing exponential interpret config values:
-          # start = base number
-          # end   = max number
-          # steps = exponent coeffecient
+          # start = coefficient
+          # end   = base of exponent
+          # steps = max exponent multiplier
           # runs = runs (no change)
           if (my $dist = $msettings{'dist'}) # exponential distribution
           {
-            if (($dist eq 'exp') || ($dist eq 'exp10'))
+            if ($dist eq 'exp')
             {
-              my $exp = ($dist eq 'exp') ? EXP : 10;
-              my $current_val = $entry->{'start_val'} * ($exp ** $run_count);
+              $current_val = $entry->{'start_val'} * ($entry->{'end_val'} ** $run_count);
               $delta=0;
             }
             elsif ($dist eq 'even')
@@ -311,7 +307,7 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
             }
             else
             {
-              die "Invalid distribtution type. Valid types: 'exp', 'exp10', 'even'";
+              die "Invalid distribtution type. Valid types: 'exp', 'even'";
             }
           }
           else 
@@ -323,38 +319,27 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
 
         # Make dir for this concentraiton and do this step num_runs times
         my $new_step_dir = $new_param_dir . '/' . $current_val;
-        mkdir ($new_step_dir) or die "Couldn't create step dir '$new_step_dir'! $?";
+        mkdir ($new_step_dir) or die "Couldn't create step dir '$new_step_dir'! $!";
 
         for my $run_num (1..$entry->{'num_runs'})
         {
           my $srun= sprintf "%05d", $run_num;
-          if ($step_num > 1)
-          {
-            print $fh_copy "resetConcentrations();\n\n";
-          }
+          print $fh_copy "resetConcentrations();\n\n" if ($step_num > 1);
           print $fh_copy "setConcentration(\"$entry->{'param'}\", $current_val);\n";
           my $prefix = $new_step_dir . '/' . $srun;
-          #print "PREFIX: $prefix\n";
           my $stead_state = 1;
-          my $opt= "prefix=>\"$prefix\",suffix=>\"\",t_end=>$msettings{'t_end'},n_steps=>$msettings{'n_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$msettings{'do_sparse'}";
-          if ($steady_state)
-          {
-            $opt .= ",steady_state=>1";
-          }
+          my $opt = "prefix=>\"$prefix\",suffix=>\"\",t_end=>$msettings{'t_end'},n_steps=>$msettings{'n_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$msettings{'do_sparse'},steady_state=>$msettings{'steady'}";
           print $fh_copy "simulate_ssa({$opt});\n";
-
         } # done with runs
 
         $current_val += $delta;
         $run_count++;
 
-        last if ($current_val > $entry->{'end_val'}); # past range!
-
      } # done with all steps
 
     } # done with entries for this model
 
-    close $fh_copy or die "Couldn't save file '$model_path_copy'! $?";
+    close $fh_copy or die "Couldn't save file '$model_path_copy'! $!";
 
     # Run BioNetGen on file
     print "\nRunning BioNetGen on '$model_path_copy'\n";
@@ -372,9 +357,49 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
   print "\nScanBatch is DONE!\n";
 }
 
-sub log10 {
+# Return log(n) to a specific base, or natural log if no base provided.
+sub log_base {
   my $n = shift;
-  return log($n)/log(10);
+  die "No number provided" unless defined($n);
+  my $base = shift;
+  if (defined($base))
+  {
+    return log($n)/log($base);
+  } else {
+    return log($n);
+  }
 } 
+
+
+# Replace a constant symbol for a numerical value (e, pi, etc.)
+sub unconst {
+  my $n = shift;
+  die "No number provided" unless defined($n);
+
+  my %constants = (
+    'e' => exp(1),
+    'pi' => PI,
+  );
+
+  # Is this a constant?
+  if (grep /$n/i, (keys %constants))
+  {
+    return $constants{lc($n)};
+  } else {
+    die "Invalid constant: '$n'!";
+  }
+}
+
+# Convert number in scientific notation to decimal
+sub sci2dec {
+  my $n = shift;
+  die "No number provided" unless defined($n);
+
+  die "Invalid scientific notation formation for '$n'!"
+    unless ($n =~ /^(\-?\d+\.?\d*)[eE](\-?\d+\.?\d*)$/);
+  print "1: $1, 2: $2\n";
+}
+
+
 
 1;
