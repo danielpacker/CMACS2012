@@ -132,23 +132,24 @@ created, as specified in your model file.
   concentration corresponding to setParamter() or setConcentration()
 * Allow config to specify a range from start_val to end_val or
   to specify a series (perhaps start_val can be a list?)
-* Allow config to specify a range with a custom exponential function
-  (specify base and exponent. ex. X^(Yi) where i is the iteration
 * Add generation of time-series data by skimming the generated gdat
   files for a given target (column) and threshhold value specified
   in the model config. Perhaps:
   [model.bngl]
   threshhold=123
   target_column=2
-* Remove double quotes around 2nd arg for setConcenration() - prob not necessary.
 * Don't overwrite network?
-* Save equil run data in appropriate subdirs (currently hard coded to 'equil')
 * Save data files in a timestamped directory so we can avoid overwriting old data
-* Remove any simulate/set commands at end of original model (make optional) like:
-  [model.bngl]
-  remove_commands=1
 * Add module for generation of R histograms from time series data in data files
   - See above about time-series data
+
+* DONE: Allow config to specify a range with a custom exponential function
+  (specify base and exponent. ex. X^(Yi) where i is the iteration
+* IGNORE: Remove double quotes around 2nd arg for setConcenration() - prob not necessary.
+* DONE Save equil run data in appropriate subdirs (currently hard coded to 'equil')
+* DONE: Remove any simulate/set commands at end of original model (make optional) like:
+  [model.bngl]
+  remove_commands=1
 
 
 === More documentation to follow... ===
