@@ -272,9 +272,6 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
       {
         my $delta = 0; # Allow use of a single value for start/end
 
-        # Convert known constants to numerical values
-        $entry->{'end_val'} = grep($entry->{'end_val'}, qw/e E/) ? exp(1) : $entry->{'end_val'};
-
         if ($entry->{'end_val'} != $entry->{'start_val'})
         {
           # If we're doing exponential interpret config values:
@@ -291,8 +288,8 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
             }
             elsif ($dist eq 'even')
             { # default
-              my $next_step = ($entry->{'num_steps'} == 1) ? 1 : $entry->{'num_steps'} - 1;
-              $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / $next_step;
+              $current_val += $delta;
+              $delta = ($entry->{'end_val'} - $entry->{'start_val'}) / ($entry->{'num_steps'} - 1);
             }
             else
             {
