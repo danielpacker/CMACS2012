@@ -21,7 +21,8 @@ sub new {
   my %defaults = (
     'data_dir'  => '.',
     'out_dir'  => '.',
-    'data_threshhold' => 0
+    'data_threshhold' => 0,
+    'format' => 'png',
     );
 
   %params = map { $_ => defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
@@ -41,7 +42,9 @@ sub process {
   my $self = shift;
   die "Call via object" unless defined($self);
 
-  $self->find_data_files(); # populate @data_files
+  my $dir_to_process = shift || $self->{'data_dir'};
+
+  $self->find_data_files($dir_to_process); # populate @data_files
   #print "@data_files";
 
   my @times = $self->get_activation_times(
@@ -50,10 +53,9 @@ sub process {
 
   $self->generate_cdf(
     'values' => \@times,
-    'output_dir' => $self->{'out_dir'},
-    'display_cdf' => 1
+    'output_dir' => $dir_to_process,
+    'display_cdf' => 0
     );
-
 
 }
 
@@ -62,8 +64,9 @@ sub find_data_files {
   my $self = shift;
   die "Call via object!" unless defined($self);
 
-  my $find_path = $self->{'data_dir'};
+  my $find_path = shift || $self->{'data_dir'};
   die "No find_path defined" unless defined($find_path);
+  die "Dir '$find_path' not found!" unless (-e $find_path);
 
   sub wanted {
     push(@data_files, $File::Find::name) if (/.*\.gdat/);
@@ -140,15 +143,22 @@ sub generate_cdf {
   my $formatted_times = join(', ', reverse sort(@times));
   #print "formatted_times = $formatted_times\n";
 
-  my $output_file = $params{'output_dir'} . '/' . 'cdf.ps';
+  my $fmt = $self->{'format'};
+  my $output_file = $params{'output_dir'} . '/' . 'cdf.' . $fmt;
   print "Writing cdf plot to '$output_file'\n";
   my $R = $self->{'R'};
-  $R->run(qq`postscript("$output_file" , horizontal=FALSE , width=500 , height=500 , pointsize=12)`);
+  if ($fmt eq 'ps')
+  {
+    $R->run(qq`postscript("$output_file" , horizontal=FALSE , width=500 , height=500 , pointsize=12)`);
+  }
+  elsif ($fmt eq 'png')
+  {
+    $R->run(qq`png("$output_file" , width=500 , height=500 , pointsize=12)`);
+  }
   $R->run(qq`x <- c($formatted_times);`);
   $R->run(qq`plot(ecdf(x), verticals=TRUE, do.points=FALSE);`);
   $R->stop();
-
-  exec("ghostscript $output_file") if ($params{'display_cdf'});
+  #exec("ghostscript $output_file") if ($params{'display_cdf'});
 }
 
 sub dump {

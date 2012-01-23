@@ -9,6 +9,7 @@ use strict;
 use warnings;
 
 use File::Copy;
+use ScanBatch::Stats;
 
 ##############################################################################
 # PROGRAM CONSTANTS:
@@ -65,6 +66,14 @@ sub new {
         }
       }
     }
+  }
+
+  if (exists($self->{'stats'}) and ($self->{'stats'}==1))
+  {
+    $self->{'stats'} = ScanBatch::Stats->new(
+      'format' => 'png',
+    );
+    die "no stats made" unless defined($self->{'stats'});
   }
 
   my $obj = bless $self, $class;
@@ -328,7 +337,7 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
         $current_val += $delta;
         $run_count++;
 
-     } # done with all steps
+      } # done with all steps
 
     } # done with entries for this model
 
@@ -381,6 +390,24 @@ sub process_param {
   }
   return $processed;
 }
+
+
+# not working, do plots
+sub do_plots {
+#  # Generate a plot?
+#  my %msettings;
+#  if (my $plot = $msettings{'plot'})
+#  {
+#    print "PLOT!: $plot\n";
+#    if (defined($self->{'stats'}))
+#    {
+#      print "PROCESSING $new_param_dir\n";
+#      $self->{'stats'}->process($new_param_dir);
+#    }
+#  }
+}
+
+
 
 
 ##############################################################################

@@ -12,7 +12,8 @@ use constant CONF_FILE    => 'sb.conf';
 use constant CONF_DEFAULT => (scalar(@ARGV)==0) ? CONF_DIR . CONF_FILE : $ARGV[0];
 
 my $sb = ScanBatch->new(
-  'config_file' => CONF_DEFAULT
+  'config_file' => CONF_DEFAULT,
+  'stats' => 0
 );
 
 # Show state of object (data from config file)
