@@ -7,7 +7,7 @@ package ScanBatch::Stats;
 use strict;
 use warnings;
 
-use Statistics::R;
+#use Statistics::R;
 use File::Find;
 
 
