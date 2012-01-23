@@ -51,9 +51,10 @@ sub process {
     'data_threshhold' => $self->{'data_threshhold'}
   );
 
+print "TIMES: @times\n";
   $self->generate_cdf(
     'values' => \@times,
-    'output_dir' => $dir_to_process,
+    'output_dir' => $self->{'out_dir'} || $dir_to_process,
     'display_cdf' => 0
     );
 
