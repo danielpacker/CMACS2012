@@ -26,7 +26,8 @@ use constant DEFAULT_DO_EQ        => 1;
 use constant DEFAULT_T_END        => 500;
 use constant DEFAULT_N_STEPS      => 250;
 use constant DEFAULT_DO_SPARSE    => 1;
-use constant DEFAULT_MDL_SETTINGS => { 'do_eq'        => 1,
+use constant DEFAULT_MDL_SETTINGS => { 'sim_type'     => 'ssa',
+                                       'do_eq'        => 1,
                                        'dist'         => 'even',
                                        't_end'        => 500,
                                        'n_steps'      => 250,
@@ -105,14 +106,20 @@ sub read_conf {
         }
         die "no model context" unless defined($current_model);
 
+        # Get default settings for this model
+        $self->{'model_settings'}->{$current_model} = DEFAULT_MDL_SETTINGS
+          unless defined($self->{'model_settings'}->{$current_model});
+
         # Get specific settings for this model, if any
-        $self->{'model_settings'}->{$current_model} = DEFAULT_MDL_SETTINGS;
         if (grep(/\w+\=\w+/, $line))
         {
           my ($key, $val) = split('\s*=\s*', $line);
           $self->{'model_settings'}->{$current_model}->{$key} = $self->process_param($val);
           next;
         }
+
+        # Validate configuration line
+        die "Invalid spec '$line'!" unless ($line =~ /^.*\s*\:\s*.+,.+,.+,.+$/);
 
         #print "line: $line\n";
         # Read the individual params on this line
@@ -266,10 +273,12 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
       my $current_val = $entry->{'start_val'};
       my $run_count = 0;
 
+print "ENTRY NS: " . $entry->{'num_steps'} . "\n";
       my $num_steps = $entry->{'num_steps'};
 
       for my $step_num (1..$num_steps)
       {
+      print "$step_num: $num_steps\n";
         my $delta = 0; # Allow use of a single value for start/end
 
         if ($entry->{'end_val'} != $entry->{'start_val'})
@@ -315,7 +324,7 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
           my $prefix = $new_step_dir . '/' . $srun;
           my $stead_state = 1;
           my $opt = "prefix=>\"$prefix\",suffix=>\"\",t_end=>$msettings{'t_end'},n_steps=>$msettings{'n_steps'},output_step_interval=>1,atol=>1e-10,rtol=>1e-8,sparse=>$msettings{'do_sparse'},steady_state=>$msettings{'steady'}";
-          print $fh_copy "simulate_ssa({$opt});\n";
+          print $fh_copy "simulate_$msettings{'sim_type'}({$opt});\n";
         } # done with runs
 
         $current_val += $delta;
