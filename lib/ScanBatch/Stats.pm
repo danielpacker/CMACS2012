@@ -21,13 +21,40 @@ sub new {
   my %defaults = (
     'data_dir'  => '.',
     'out_dir'  => '.',
+    'data_threshhold' => 0
     );
 
-  %params = map { defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
+  %params = map { $_ => defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
+#use Data::Dumper; print "params: " . Dumper \%params;
+
+  for my $key (keys %params)
+  {
+    $self->{$key} = $params{$key};
+  }
 
   $self->{'R'} = Statistics::R->new();
 
   bless $self, $class;
+}
+
+sub process {
+  my $self = shift;
+  die "Call via object" unless defined($self);
+
+  $self->find_data_files(); # populate @data_files
+  #print "@data_files";
+
+  my @times = $self->get_activation_times(
+    'data_threshhold' => $self->{'data_threshhold'}
+  );
+
+  $self->generate_cdf(
+    'values' => \@times,
+    'output_dir' => $self->{'out_dir'},
+    'display_cdf' => 1
+    );
+
+
 }
 
 
@@ -35,16 +62,18 @@ sub find_data_files {
   my $self = shift;
   die "Call via object!" unless defined($self);
 
-  my $find_path = shift;
+  my $find_path = $self->{'data_dir'};
   die "No find_path defined" unless defined($find_path);
 
-  # Get list of all data files in dir find_path
-  die "find_path not defined" unless defined($self->{'data_files_path'});
   sub wanted {
     push(@data_files, $File::Find::name) if (/.*\.gdat/);
   }
   find(\&wanted, $find_path);
   #print map { "$_\n" } @data_files;
+
+  $self->get_activation_times(
+    'data_threshhold' => $self->{'data_threshhold'},
+  );
 }
 
 sub get_activation_times {
@@ -59,7 +88,7 @@ sub get_activation_times {
     'data_threshhold' => 0,
     );
 
-  %params = map { defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
+  %params = map { $_ => defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
 
   # skim times off of files
   my @times = ();
@@ -104,7 +133,7 @@ sub generate_cdf {
     'display_cdf' => 0,
     );
 
-  %params = map { defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
+  %params = map { $_ => defined($params{$_}) ? $params{$_} : $defaults{$_} } (keys %defaults);
 
   my @times = @{ $params{'values'} };
 
@@ -112,6 +141,7 @@ sub generate_cdf {
   #print "formatted_times = $formatted_times\n";
 
   my $output_file = $params{'output_dir'} . '/' . 'cdf.ps';
+  print "Writing cdf plot to '$output_file'\n";
   my $R = $self->{'R'};
   $R->run(qq`postscript("$output_file" , horizontal=FALSE , width=500 , height=500 , pointsize=12)`);
   $R->run(qq`x <- c($formatted_times);`);
@@ -119,6 +149,10 @@ sub generate_cdf {
   $R->stop();
 
   exec("ghostscript $output_file") if ($params{'display_cdf'});
+}
+
+sub dump {
+  my $self = shift or die "Call via object!";
 }
 
 1;
