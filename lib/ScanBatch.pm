@@ -273,12 +273,10 @@ simulate_ode({prefix=>"$eq_prefix", suffix=>"$eq_suffix",t_end=>$msettings{'eq_t
       my $current_val = $entry->{'start_val'};
       my $run_count = 0;
 
-print "ENTRY NS: " . $entry->{'num_steps'} . "\n";
       my $num_steps = $entry->{'num_steps'};
 
       for my $step_num (1..$num_steps)
       {
-      print "$step_num: $num_steps\n";
         my $delta = 0; # Allow use of a single value for start/end
 
         if ($entry->{'end_val'} != $entry->{'start_val'})
